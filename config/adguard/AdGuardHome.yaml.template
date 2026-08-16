@@ -1,0 +1,180 @@
+# ============================================================
+# VantaDNS — AdGuard Home Configuration Template
+#
+# This is a TEMPLATE. The real AdGuardHome.yaml is generated
+# from this file by scripts/install.ps1, which:
+#   1. Copies this file to config/adguard/AdGuardHome.yaml
+#   2. Sets the admin password hash (entered interactively at setup)
+#
+# The real AdGuardHome.yaml is in .gitignore and never committed.
+# ============================================================
+
+bind_host: 0.0.0.0          # AGH listens on all interfaces; firewall restricts to LAN
+bind_port: 3000              # Admin UI — loopback-only access enforced by firewall
+beta_bind_port: 0
+
+users:
+  - name: admin
+    # Password hash is set during install.ps1 setup — NOT stored in this template
+    # Use: htpasswd -nB admin (bcrypt) or set via AGH web UI first-run wizard
+    password: REPLACE_WITH_BCRYPT_HASH
+
+auth_attempts: 5
+block_auth_min: 15
+
+http_proxy: ""
+
+language: ""
+theme: dark
+
+debug_pprof: false
+
+web_session_ttl: 720         # 30 days session TTL
+
+dns:
+  bind_hosts:
+    - 0.0.0.0                # Firewall restricts to LAN; this binds the service
+  port: 53
+
+  # --------------------------------------------------------
+  # Upstream resolver: Unbound on loopback
+  # All non-blocked queries are forwarded here
+  # --------------------------------------------------------
+  upstream_dns:
+    - "127.0.0.1:5335"
+
+  # Bootstrap DNS: used ONLY to resolve upstream hostnames at startup.
+  # Since our upstream is 127.0.0.1 (numeric), bootstrap is not critical,
+  # but provide it as a fallback for any hostname-based upstreams added later.
+  bootstrap_dns:
+    - "9.9.9.9"              # Quad9 (bootstrap only, not the recursive resolver)
+    - "149.112.112.112"      # Quad9 secondary
+
+  # Fallback DNS: if Unbound is unreachable, use these (should not happen in normal ops)
+  fallback_dns: []
+
+  # --------------------------------------------------------
+  # Privacy: no per-query logging
+  # --------------------------------------------------------
+  upstream_mode: load_balance
+
+  # --------------------------------------------------------
+  # EDNS Client Subnet: disabled for privacy
+  # Do not send your subnet to authoritative servers
+  # --------------------------------------------------------
+  edns_client_subnet_enabled: false
+
+  # Cache inside AGH: disabled; Unbound handles all caching
+  cache_size: 0
+  cache_ttl_min: 0
+  cache_ttl_max: 0
+
+  # Rewrites: empty initially (add custom overrides here if needed)
+  rewrites: []
+
+  # Blocked response type: NXDOMAIN for most cases
+  # Using NXDOMAIN is RFC-compliant and avoids broken-site issues
+  # from returning 0.0.0.0 for some HTTP clients
+  blocking_mode: nxdomain
+
+  # DNSSEC: trust Unbound's validation
+  dnssec_enabled: false      # AGH doesn't need to re-validate; Unbound does it
+
+  # Safe search: disabled by default (set to true if you want search engine SafeSearch)
+  safe_search:
+    enabled: false
+
+  # --------------------------------------------------------
+  # Filtering — Privacy settings
+  # --------------------------------------------------------
+  filtering_enabled: true
+  filters_update_blocked: false
+
+  # Block malware/phishing in AGH as a second layer
+  parental_protection_enabled: false
+
+  # --------------------------------------------------------
+  # Rate limiting: protect against abuse
+  # --------------------------------------------------------
+  ratelimit: 20              # Max 20 queries/sec per client (default)
+  ratelimit_whitelist: []
+
+  # --------------------------------------------------------
+  # IPv6 blocking: advertise no AAAA for blocked domains
+  # --------------------------------------------------------
+  blocked_services:
+    schedule:
+      time_zone: Local
+    ids: []
+
+  # Allow only LAN subnet to use the DNS service
+  # This is an application-level backup to the firewall rules
+  allowed_clients:
+    - "10.76.181.0/24"       # LAN subnet
+    - "127.0.0.1"            # Loopback (PC itself)
+
+  disallowed_clients: []
+
+# ============================================================
+# Logging — Disabled for privacy
+# ============================================================
+querylog:
+  enabled: false             # Per-query log: OFF by default
+  file_enabled: false
+  interval: 0
+  size_memory: 0
+  ignored: []
+
+statistics:
+  enabled: true
+  interval: 86400            # 24h aggregate window only
+  ignored: []
+
+# ============================================================
+# Filters — Curated blocklists
+# ============================================================
+filters:
+  - enabled: true
+    url: https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt
+    name: AdGuard DNS Filter
+    id: 1
+
+  - enabled: true
+    url: https://easylist.to/easylist/easylist.txt
+    name: EasyList
+    id: 2
+
+  - enabled: true
+    url: https://easylist.to/easylist/easyprivacy.txt
+    name: EasyPrivacy
+    id: 3
+
+  - enabled: true
+    url: https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+    name: Steven Black Unified (Ads + Malware)
+    id: 4
+
+# Custom blocklist (your personal rules)
+user_rules:
+  - ""                       # Populated from config/blocklists/custom-blocklist.txt at startup
+
+whitelist_filters: []
+
+# Custom allowlist (false-positive overrides)
+# Populated from allowlists/custom-allowlist.txt at startup
+
+# ============================================================
+# OS / service settings
+# ============================================================
+os:
+  group: ""
+  user: ""
+  rlimit_nofile: 0
+
+schema_version: 29
+
+# ============================================================
+# AdGuard Home update & telemetry — DISABLED
+# ============================================================
+check_updates: false
+```

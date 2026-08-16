@@ -1,0 +1,15 @@
+# VantaDNS — Custom Allowlist (False-Positive Overrides)
+# ============================================================
+# Add domains here that are incorrectly blocked by the curated
+# blocklists. Entries here override all blocklist rules.
+#
+# Format: AdGuard DNS exception rules
+#
+# Examples:
+#   @@||legitimate-domain.com^         Allow domain + all subdomains
+#   @@||cdn.example.com^               Allow a specific CDN subdomain
+#
+# See: https://adguard.com/kb/general/ad-filtering/create-own-filters/
+# ============================================================
+
+# False-positive overrides go below this line:

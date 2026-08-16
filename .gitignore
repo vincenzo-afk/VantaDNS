@@ -1,0 +1,61 @@
+# ============================================================
+# VantaDNS — .gitignore
+# Keep secrets, local-state, and binaries OUT of version control
+# ============================================================
+
+# --- AdGuard Home runtime state (contains credentials & query log) ---
+config/adguard/AdGuardHome.yaml
+config/adguard/data/
+config/adguard/querylog.json
+config/adguard/stats.db
+
+# --- Unbound runtime/state ---
+config/unbound/*.key
+config/unbound/*.jnl
+config/unbound/unbound_server.key
+config/unbound/unbound_server.pem
+config/unbound/unbound_control.key
+config/unbound/unbound_control.pem
+
+# --- Root hints (fetched at install time, not static) ---
+config/unbound/root.hints
+
+# --- Local environment / machine-specific overrides ---
+.env
+.env.local
+local.toml
+local.yaml
+
+# --- Secrets & credentials ---
+secrets/
+*.secret
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+
+# --- Rust build artifacts ---
+dns-core/target/
+dashboard/node_modules/
+dashboard/.next/
+dashboard/dist/
+
+# --- Logs ---
+logs/
+*.log
+
+# --- OS artifacts ---
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# --- Editor artifacts ---
+.vscode/settings.json
+.idea/
+*.suo
+*.user
+
+# --- Temporary / scratch ---
+tmp/
+scratch/
