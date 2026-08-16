@@ -42,10 +42,14 @@ set -euo pipefail
 
 VANTA="$HOME/VantaDNS"
 BIN="$VANTA/bin/vanta-dns-core"
-PIDFILE="/tmp/vantadns.pid"
-FORWARDER_PIDFILE="/tmp/vantadns-forwarder.pid"
+# Termux has no /tmp — use its own writable temp dir (PREFIX/tmp, then HOME/.vanta)
+TMPDIR_PATH="${PREFIX:-/data/data/com.termux/files/usr}/tmp"
+mkdir -p "$TMPDIR_PATH" 2>/dev/null || TMPDIR_PATH="$HOME/.vanta"
+mkdir -p "$TMPDIR_PATH"
+PIDFILE="$TMPDIR_PATH/vantadns.pid"
+FORWARDER_PIDFILE="$TMPDIR_PATH/vantadns-forwarder.pid"
 CONFIG_SRC="$VANTA/phone/phone-vanta-dns.toml"
-CONFIG="/tmp/vantadns-phone.toml"
+CONFIG="$TMPDIR_PATH/vantadns-phone.toml"
 
 log() { echo -e "\033[36m[vanta-vpn]\033[0m $*"; }
 
