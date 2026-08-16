@@ -86,7 +86,23 @@ This log records every significant installation, configuration change, command, 
 - **Google (8.8.8.8):** ~76 ms
 - **Quad9 (9.9.9.9):** ~92 ms
 
-*Note: Local DNS caching reduces lookup latency for repeated domains. It does not alter underlying ISP network bandwidth or ping.*
+---
+
+## Entry 004 — Stage 3 Custom Rust Core (`dns-core/`) Implementation
+**Date:** 2026-08-16  
+**Engineer:** vincenzo-afk  
+**Stage:** 3 — Custom Rust DNS Core
+
+### Architecture & Implementation
+Created `dns-core/` standalone Rust project containing:
+1. **`protocol`**: Binary DNS packet parser and encoder for RFC 1035 headers, questions, resource records (A, AAAA, CNAME, MX, TXT, PTR), and label compression pointers.
+2. **`filter`**: `DomainTrie` in-memory structure using `AHashSet` for O(1) exact domain lookups and fast parent domain wildcard matching (`||example.com^`). `FilterEngine` enforces allowlist precedence over blocklists.
+3. **`cache`**: Bounded LRU DNS response cache with TTL expiration, remaining TTL adjustment, and hit/miss/eviction metrics.
+4. **`resolver`**: Asynchronous Tokio UDP forwarder querying the recursive Unbound backend (`127.0.0.1:5335`).
+5. **`health`**: Service state machine (`ONLINE`, `DEGRADED`, `OFFLINE`, `ERROR`, `STOPPED`).
+6. **`config`**: TOML configuration loader and validator with `config/vanta-dns.toml`.
+7. **`cli`**: Commands (`Run`, `TestDomain`, `ValidateConfig`, `Benchmark`).
+8. **Unit Tests**: Full unit test suite in `tests/unit_tests.rs` covering packet codec, normalization, wildcard rules, LRU eviction, and config validation.
 
 ---
 
