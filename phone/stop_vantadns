@@ -1,0 +1,6 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# One-tap launcher: stop VantaDNS
+sleep 2
+bash ~/VantaDNS/bin/vanta-vpn.sh stop >/dev/null 2>&1
+echo "VantaDNS STOPPED - ads will return"
+sleep 3

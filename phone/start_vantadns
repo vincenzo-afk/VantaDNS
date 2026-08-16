@@ -1,0 +1,11 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# One-tap launcher: start VantaDNS and block ads
+sleep 2
+bash ~/VantaDNS/bin/vanta-vpn.sh start >/dev/null 2>&1
+STATUS=$(bash ~/VantaDNS/bin/vanta-vpn.sh status 2>&1)
+if echo "$STATUS" | grep -q "RUNNING"; then
+    echo "VantaDNS STARTED - ads blocked"
+else
+    echo "VantaDNS start FAILED - open Termux to fix"
+fi
+sleep 4

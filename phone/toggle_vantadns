@@ -1,0 +1,12 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# One-tap launcher: toggles VantaDNS (start if stopped, stop if running)
+sleep 2
+STATUS=$(bash ~/VantaDNS/bin/vanta-vpn.sh status 2>&1)
+if echo "$STATUS" | grep -q "RUNNING"; then
+    bash ~/VantaDNS/bin/vanta-vpn.sh stop >/dev/null 2>&1
+    echo "VantaDNS STOPPED - ads will return"
+else
+    bash ~/VantaDNS/bin/vanta-vpn.sh start >/dev/null 2>&1
+    echo "VantaDNS STARTED - ads blocked"
+fi
+sleep 4

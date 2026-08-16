@@ -122,6 +122,20 @@ fetch_robust "hagezi-pro-wild.txt" \
     "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.txt" \
     "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@main/wildcard/pro.txt" || true
 
+fetch_robust "hagezi-pro-plus.txt" \
+    "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.plus.txt" \
+    "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@main/wildcard/pro.plus.txt" || true
+
+fetch_robust "stevenblack-domains.txt" \
+    "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts" || true
+
+# Convert StevenBlack hosts format (0.0.0.0 domain) -> bare domains
+if [ -f "$LISTS/stevenblack-domains.txt" ] && grep -q "^0\.0\.0\.0" "$LISTS/stevenblack-domains.txt"; then
+    grep -E "^0\.0\.0\.0" "$LISTS/stevenblack-domains.txt" | awk '{print $2}' \
+        | grep -E '^[a-z0-9]' | sort -u > "$LISTS/.stevenblack.tmp" && \
+        mv "$LISTS/.stevenblack.tmp" "$LISTS/stevenblack-domains.txt"
+fi
+
 rm -f "$LISTS"/.oisd-big-full.txt "$LISTS"/.kadhosts-full.txt
 
 green ""

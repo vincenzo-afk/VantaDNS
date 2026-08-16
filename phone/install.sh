@@ -109,6 +109,17 @@ termux-wake-lock
 BOOTEOF
 chmod +x "$HOME/.termux/boot/start-vantadns.sh"
 
+step "Installing one-tap home screen launchers (Termux:Widget)"
+cp "$VANTA_DIR/phone/toggle_vantadns" "$VANTA_DIR/phone/start_vantadns" "$VANTA_DIR/phone/stop_vantadns" \
+   "$VANTA_DIR/bin/"
+chmod +x "$VANTA_DIR/bin/toggle_vantadns" "$VANTA_DIR/bin/start_vantadns" "$VANTA_DIR/bin/stop_vantadns"
+for d in "$HOME/.shortcuts" "$HOME/.termux/widget"; do
+    mkdir -p "$d"
+    cp -f "$VANTA_DIR/bin/toggle_vantadns" "$VANTA_DIR/bin/start_vantadns" "$VANTA_DIR/bin/stop_vantadns" "$d/" 2>/dev/null || true
+    chmod +x "$d/"* 2>/dev/null || true
+done
+green "  Launcher scripts also in ~/VantaDNS/bin/ and ~/.shortcuts/"
+
 green ""
 green "============================================================"
 green "  VantaDNS installed on your phone!"
