@@ -3,15 +3,15 @@ use crate::protocol::DnsError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum QueryType {
-    A = 1,
-    NS = 2,
-    CNAME = 5,
-    SOA = 6,
-    PTR = 12,
-    MX = 15,
-    TXT = 16,
-    AAAA = 28,
-    ANY = 255,
+    A,
+    NS,
+    CNAME,
+    SOA,
+    PTR,
+    MX,
+    TXT,
+    AAAA,
+    ANY,
     Unknown(u16),
 }
 
@@ -49,7 +49,7 @@ impl QueryType {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QueryClass {
-    IN = 1,
+    IN,
     Unknown(u16),
 }
 
@@ -98,9 +98,7 @@ impl DnsQuestion {
 /// Decodes domain name with label length checks and pointer compression handling (RFC 1035 §4.1.4)
 pub fn read_domain_name(buf: &mut std::io::Cursor<&[u8]>) -> Result<String, DnsError> {
     let mut domain = String::new();
-    let mut jumped = false;
     let mut jumps_count = 0;
-    let original_pos = buf.position();
 
     loop {
         if jumps_count > 50 {
@@ -123,10 +121,6 @@ pub fn read_domain_name(buf: &mut std::io::Cursor<&[u8]>) -> Result<String, DnsE
             let b2 = buf.get_u8();
             let pointer_offset = (((len & 0x3F) as u64) << 8) | (b2 as u64);
 
-            if !jumped {
-                jumped = true;
-            }
-
             jumps_count += 1;
             buf.set_position(pointer_offset);
         } else {
@@ -135,21 +129,17 @@ pub fn read_domain_name(buf: &mut std::io::Cursor<&[u8]>) -> Result<String, DnsE
                 return Err(DnsError::BufferTooShort("Label length exceeds buffer"));
             }
 
-            let slice = &buf.chunk()[..label_len];
-            let label = std::str::from_utf8(slice)
-                .map_err(|_| DnsError::InvalidDomainName("Non-UTF8 domain label"))?;
+            let mut label_bytes = vec![0u8; label_len];
+            buf.copy_to_slice(&mut label_bytes);
 
-            buf.advance(label_len);
+            let label = std::str::from_utf8(&label_bytes)
+                .map_err(|_| DnsError::InvalidDomainName("Non-UTF8 domain label"))?;
 
             if !domain.is_empty() {
                 domain.push('.');
             }
             domain.push_str(&label.to_lowercase());
         }
-    }
-
-    if jumped {
-        // Position was restored if we jumped, but we don't need to restore because original_pos was tracked
     }
 
     Ok(domain)

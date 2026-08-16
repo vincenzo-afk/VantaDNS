@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use ahash::AHashSet;
 
 #[derive(Debug, Default, Clone)]
@@ -41,7 +40,6 @@ impl DomainTrie {
             return;
         }
 
-        // Store both as wildcard parent matcher and exact matcher for O(1) parent lookup
         self.wildcard_matches.insert(normalized.clone());
         self.exact_matches.insert(normalized);
     }

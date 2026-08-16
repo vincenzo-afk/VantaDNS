@@ -3,10 +3,10 @@ use std::time::Instant;
 use tokio::net::UdpSocket;
 use tokio::sync::Mutex;
 use clap::{Parser, Subcommand};
-use tracing::{info, warn, error};
+use tracing::{info, warn};
 
 use vanta_dns_core::{
-    ServerConfig, DnsPacket, FilterEngine, FilterResult, DnsCache, UpstreamForwarder, ServiceState, SystemHealth
+    ServerConfig, DnsPacket, FilterEngine, FilterResult, DnsCache, UpstreamForwarder
 };
 
 #[derive(Parser)]
@@ -93,97 +93,104 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  Evaluated 1,000,000 domain lookups in {:.3?} ({:.0} ops/sec)", duration, ops_per_sec);
             println!("  Average lookup latency: {:.2} ns per domain\n", (duration.as_nanos() as f64) / (iterations as f64));
         }
-        Some(Commands::Run { config }) | None => {
-            println!("\n  VantaDNS Rust Core v0.1.0 starting...");
-            let config = ServerConfig::load_from_file(&config).unwrap_or_default();
-            
-            println!("  Bind address:     {}", config.bind_addr);
-            println!("  Upstream:         {}", config.upstream_addr);
-            println!("  Block mode:       {}", config.block_mode);
-            println!("  Cache capacity:   {} entries", config.cache_capacity);
-            
-            let mut filter_engine = FilterEngine::new();
-            for path in &config.blocklist_paths {
-                if let Ok(content) = std::fs::read_to_string(path) {
-                    let n = filter_engine.load_blocklist_content(&content);
-                    println!("  Loaded {} rules from {}", n, path);
-                }
-            }
-
-            let cache = Arc::new(Mutex::new(DnsCache::new(
-                config.cache_capacity,
-                config.min_ttl_secs,
-                config.max_ttl_secs,
-            )));
-
-            let forwarder = UpstreamForwarder::new(config.upstream_addr, 5);
-            let filter = Arc::new(filter_engine);
-
-            println!("  VantaDNS Core is ONLINE and listening.\n");
-            
-            let socket = UdpSocket::bind(config.bind_addr).await?;
-            let mut buf = [0u8; 4096];
-
-            loop {
-                let (len, src) = match socket.recv_from(&mut buf).await {
-                    Ok(res) => res,
-                    Err(e) => {
-                        warn!("UDP recv error: {}", e);
-                        continue;
-                    }
-                };
-
-                let query_bytes = &buf[..len];
-                let packet = match DnsPacket::parse(query_bytes) {
-                    Ok(p) => p,
-                    Err(_) => continue,
-                };
-
-                let question = match packet.questions.first() {
-                    Some(q) => q.clone(),
-                    None => continue,
-                };
-
-                // 1. Check Filter
-                match filter.evaluate(&question.name) {
-                    FilterResult::Blocked(rule) => {
-                        info!("BLOCKED {} (matched rule: {})", question.name, rule);
-                        let blocked_pkt = packet.build_blocked_response(config.block_mode == "nxdomain");
-                        let _ = socket.send_to(&blocked_pkt.to_bytes(), src).await;
-                        continue;
-                    }
-                    FilterResult::AllowListMatched(rule) => {
-                        info!("ALLOWED {} (override rule: {})", question.name, rule);
-                    }
-                    FilterResult::Allowed => {}
-                }
-
-                // 2. Check Cache
-                {
-                    let mut cache_guard = cache.lock().await;
-                    if let Some(cached_resp) = cache_guard.get(&question.name, question.qtype) {
-                        info!("CACHE HIT {}", question.name);
-                        let _ = socket.send_to(&cached_resp.to_bytes(), src).await;
-                        continue;
-                    }
-                }
-
-                // 3. Upstream Forwarding
-                match forwarder.forward_raw(query_bytes).await {
-                    Ok(resp_bytes) => {
-                        let _ = socket.send_to(&resp_bytes, src).await;
-                        if let Ok(resp_packet) = DnsPacket::parse(&resp_bytes) {
-                            let mut cache_guard = cache.lock().await;
-                            cache_guard.insert(&question.name, question.qtype, resp_packet);
-                        }
-                    }
-                    Err(e) => {
-                        warn!("Upstream error for {}: {}", question.name, e);
-                    }
-                }
-            }
+        Some(Commands::Run { config }) => {
+            run_server(&config).await?;
+        }
+        None => {
+            run_server("config/vanta-dns.toml").await?;
         }
     }
 
     Ok(())
+}
+
+async fn run_server(config_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    println!("\n  VantaDNS Rust Core v0.1.0 starting...");
+    let config = ServerConfig::load_from_file(config_path).unwrap_or_default();
+
+    println!("  Bind address:     {}", config.bind_addr);
+    println!("  Upstream:         {}", config.upstream_addr);
+    println!("  Block mode:       {}", config.block_mode);
+    println!("  Cache capacity:   {} entries", config.cache_capacity);
+
+    let mut filter_engine = FilterEngine::new();
+    for path in &config.blocklist_paths {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            let n = filter_engine.load_blocklist_content(&content);
+            println!("  Loaded {} rules from {}", n, path);
+        }
+    }
+
+    let cache = Arc::new(Mutex::new(DnsCache::new(
+        config.cache_capacity,
+        config.min_ttl_secs,
+        config.max_ttl_secs,
+    )));
+
+    let forwarder = UpstreamForwarder::new(config.upstream_addr, 5);
+    let filter = Arc::new(filter_engine);
+
+    println!("  VantaDNS Core is ONLINE and listening.\n");
+
+    let socket = UdpSocket::bind(config.bind_addr).await?;
+    let mut buf = [0u8; 4096];
+
+    loop {
+        let (len, src) = match socket.recv_from(&mut buf).await {
+            Ok(res) => res,
+            Err(e) => {
+                warn!("UDP recv error: {}", e);
+                continue;
+            }
+        };
+
+        let query_bytes = &buf[..len];
+        let packet = match DnsPacket::parse(query_bytes) {
+            Ok(p) => p,
+            Err(_) => continue,
+        };
+
+        let question = match packet.questions.first() {
+            Some(q) => q.clone(),
+            None => continue,
+        };
+
+        // 1. Check Filter
+        match filter.evaluate(&question.name) {
+            FilterResult::Blocked(rule) => {
+                info!("BLOCKED {} (matched rule: {})", question.name, rule);
+                let blocked_pkt = packet.build_blocked_response(config.block_mode == "nxdomain");
+                let _ = socket.send_to(&blocked_pkt.to_bytes(), src).await;
+                continue;
+            }
+            FilterResult::AllowListMatched(rule) => {
+                info!("ALLOWED {} (override rule: {})", question.name, rule);
+            }
+            FilterResult::Allowed => {}
+        }
+
+        // 2. Check Cache
+        {
+            let mut cache_guard = cache.lock().await;
+            if let Some(cached_resp) = cache_guard.get(&question.name, question.qtype) {
+                info!("CACHE HIT {}", question.name);
+                let _ = socket.send_to(&cached_resp.to_bytes(), src).await;
+                continue;
+            }
+        }
+
+        // 3. Upstream Forwarding
+        match forwarder.forward_raw(query_bytes).await {
+            Ok(resp_bytes) => {
+                let _ = socket.send_to(&resp_bytes, src).await;
+                if let Ok(resp_packet) = DnsPacket::parse(&resp_bytes) {
+                    let mut cache_guard = cache.lock().await;
+                    cache_guard.insert(&question.name, question.qtype, resp_packet);
+                }
+            }
+            Err(e) => {
+                warn!("Upstream error for {}: {}", question.name, e);
+            }
+        }
+    }
 }
