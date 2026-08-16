@@ -1,0 +1,33 @@
+# ============================================================
+# VantaDNS — Custom Rust Core Configuration
+# config/vanta-dns.toml
+# ============================================================
+
+# Server bind address for DNS queries (UDP/TCP)
+bind_addr = "127.0.0.1:5353"
+
+# Upstream recursive resolver address (Unbound)
+upstream_addr = "127.0.0.1:5335"
+
+# Blocking mode: "nxdomain" (returns NXDOMAIN) or "zero_ip" (returns 0.0.0.0)
+block_mode = "nxdomain"
+
+# Maximum number of DNS records to keep in LRU cache
+cache_capacity = 10000
+
+# Cache TTL constraints in seconds
+min_ttl_secs = 300
+max_ttl_secs = 86400
+
+# Paths to blocklist files (loaded and compiled at startup)
+blocklist_paths = [
+    "config/blocklists/custom-blocklist.txt"
+]
+
+# Paths to allowlist override files (loaded and compiled at startup)
+allowlist_paths = [
+    "allowlists/custom-allowlist.txt"
+]
+
+# Query logging (disabled by default for privacy)
+logging_enabled = false

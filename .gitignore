@@ -1,7 +1,6 @@
-# ============================================================
-# VantaDNS — .gitignore
-# Keep secrets, local-state, and binaries OUT of version control
-# ============================================================
+# --- Rust target directory ---
+target/
+dns-core/target/
 
 # --- Runtime binaries & state ---
 bin/
