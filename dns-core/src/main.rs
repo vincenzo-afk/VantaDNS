@@ -134,18 +134,29 @@ async fn run_server(config_path: &str) -> Result<(), Box<dyn std::error::Error>>
     println!("  TCP listener:     {}", if config.tcp_enabled { "ENABLED" } else { "disabled" });
     println!("  TLS listener:     {}", if config.tls_enabled { "ENABLED" } else { "disabled" });
 
+    let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/tmp".into());
+    let resolve_path = |p: &str| -> String {
+        if p.starts_with("$HOME") {
+            format!("{}{}", home_dir, &p["$HOME".len()..])
+        } else {
+            p.to_string()
+        }
+    };
+
     let mut filter_engine = FilterEngine::new();
-    for path in &config.blocklist_paths {
-        if let Ok(content) = std::fs::read_to_string(path) {
+    for raw_path in &config.blocklist_paths {
+        let path = resolve_path(raw_path);
+        if let Ok(content) = std::fs::read_to_string(&path) {
             let n = filter_engine.load_blocklist_content(&content);
-            
+
             println!("  Loaded {} rules from {}", n, path);
         } else {
             println!("  WARN: could not read blocklist {}", path);
         }
     }
-    for path in &config.allowlist_paths {
-        if let Ok(content) = std::fs::read_to_string(path) {
+    for raw_path in &config.allowlist_paths {
+        let path = resolve_path(raw_path);
+        if let Ok(content) = std::fs::read_to_string(&path) {
             let n = filter_engine.load_allowlist_content(&content);
             println!("  Loaded {} allowlist rules from {}", n, path);
         } else {

@@ -52,16 +52,46 @@ fi
 
 step "Fetching the maximum blocklists"
 mkdir -p "$VANTA_DIR/config/blocklists"
-curl -sSL --max-time 90 "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt" \
+curl -sSL --retry 3 --retry-all-errors --max-time 180 "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt" \
     -o "$VANTA_DIR/config/blocklists/adguard-base.txt" || \
     red "  AdGuard base fetch failed (offline?) — bundled lists still apply"
-curl -sSL --max-time 90 "https://adguardteam.github.io/HostlistsRegistry/assets/filter_2.txt" \
+curl -sSL --retry 3 --retry-all-errors --max-time 180 "https://adguardteam.github.io/HostlistsRegistry/assets/filter_2.txt" \
     -o "$VANTA_DIR/config/blocklists/adguard-dns-filter.txt" || true
-curl -sSL --max-time 90 "https://big.oisd.nl/" \
-    -o "$VANTA_DIR/config/blocklists/oisd-big.txt" || true
-curl -sSL --max-time 90 "https://kadantiscam.netlify.app/kadhosts.txt" \
-    -o "$VANTA_DIR/config/blocklists/kadhosts.txt" || true
-curl -sSL --max-time 90 "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.txt" \
+curl -sSL --retry 3 --retry-all-errors --max-time 240 "https://big.oisd.nl/" \
+    -o "$VANTA_DIR/config/blocklists/.oisd-big-full.txt" || true
+curl -sSL --retry 3 --retry-all-errors --max-time 120 "https://raw.githubusercontent.com/PolishFiltersTeam/KADhosts/master/KADhosts.txt" \
+    -o "$VANTA_DIR/config/blocklists/.kadhosts-full.txt" || true
+# Split any downloaded big lists into line-safe bundled chunks
+python3 - "$VANTA_DIR" << 'PYEOF'
+import sys, os
+base = sys.argv[1]
+bl = f"{base}/config/blocklists"
+for name in ["oisd-big", "kadhosts"]:
+    src = f"{bl}/.{name}-full.txt"
+    if not os.path.isfile(src) or os.path.getsize(src) < 1000:
+        continue
+    with open(src, "r", encoding="utf-8", errors="replace") as fp:
+        lines = fp.readlines()
+    chunks, cur, n = [], [], 0
+    for line in lines:
+        cur.append(line)
+        n += len(line.encode("utf-8", "replace"))
+        if n >= 500000:
+            chunks.append(cur)
+            cur, n = [], 0
+    if cur:
+        chunks.append(cur)
+    os.makedirs(f"{bl}/bundled", exist_ok=True)
+    for f in os.listdir(f"{bl}/bundled"):
+        if f.startswith(f"{name}.part"):
+            os.remove(f"{bl}/bundled/{f}")
+    for i, chunk in enumerate(chunks):
+        with open(f"{bl}/bundled/{name}.part{chr(97 + i % 26)}{chr(97 + i // 26) if i >= 26 else ''}", "w", encoding="utf-8") as fp:
+            fp.writelines(chunk)
+    os.remove(src)
+    print(f"chunked {name}: {len(lines)} lines into {len(chunks)} parts", flush=True)
+PYEOF
+curl -sSL --retry 3 --retry-all-errors --max-time 180 "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.txt" \
     -o "$VANTA_DIR/config/blocklists/hagezi-pro-wild.txt" || true
 
 step "Installing the local DNS VPN wrapper (always refresh existing copy)"
