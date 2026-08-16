@@ -8,9 +8,10 @@
 # Examples:
 #   ||example-bad-domain.com^          Block exact domain + all subdomains
 #   ||ads.example.com^                 Block a specific subdomain
-#   /banner/*/img^                     Block URLs matching pattern
-#
-# See: https://adguard.com/kb/general/ad-filtering/create-own-filters/
 # ============================================================
 
-# Personal additions go below this line:
+||doubleclick.net^
+||googlesyndication.com^
+||googleadservices.com^
+||adservice.google.com^
+||telemetry.microsoft.com^

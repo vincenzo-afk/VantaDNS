@@ -13,6 +13,38 @@ pub enum ConfigError {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerSection {
+    pub bind_addr: SocketAddr,
+    pub upstream_addr: SocketAddr,
+    pub block_mode: String,
+    #[serde(default)]
+    pub logging_enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheSection {
+    pub capacity: usize,
+    pub min_ttl_secs: u64,
+    pub max_ttl_secs: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilterSection {
+    #[serde(default)]
+    pub blocklist_paths: Vec<String>,
+    #[serde(default)]
+    pub allowlist_paths: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TomlConfigFile {
+    pub server: ServerSection,
+    pub cache: CacheSection,
+    #[serde(default)]
+    pub filter: Option<FilterSection>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfig {
     pub bind_addr: SocketAddr,
     pub upstream_addr: SocketAddr,
@@ -28,14 +60,14 @@ pub struct ServerConfig {
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
-            bind_addr: "127.0.0.1:53".parse().unwrap(),
+            bind_addr: "127.0.0.1:5353".parse().unwrap(),
             upstream_addr: "127.0.0.1:5335".parse().unwrap(),
             block_mode: "nxdomain".to_string(),
             cache_capacity: 10000,
-            min_ttl_secs: 300,
+            min_ttl_secs: 60,
             max_ttl_secs: 86400,
-            blocklist_paths: vec!["config/blocklists/custom-blocklist.txt".to_string()],
-            allowlist_paths: vec!["allowlists/custom-allowlist.txt".to_string()],
+            blocklist_paths: vec![],
+            allowlist_paths: vec![],
             logging_enabled: false,
         }
     }
@@ -44,6 +76,29 @@ impl Default for ServerConfig {
 impl ServerConfig {
     pub fn load_from_file(path: &str) -> Result<Self, ConfigError> {
         let content = std::fs::read_to_string(path)?;
+        
+        // Try table format first
+        if let Ok(toml_file) = toml::from_str::<TomlConfigFile>(&content) {
+            let filter = toml_file.filter.unwrap_or_else(|| FilterSection {
+                blocklist_paths: vec![],
+                allowlist_paths: vec![],
+            });
+            let config = ServerConfig {
+                bind_addr: toml_file.server.bind_addr,
+                upstream_addr: toml_file.server.upstream_addr,
+                block_mode: toml_file.server.block_mode,
+                logging_enabled: toml_file.server.logging_enabled,
+                cache_capacity: toml_file.cache.capacity,
+                min_ttl_secs: toml_file.cache.min_ttl_secs,
+                max_ttl_secs: toml_file.cache.max_ttl_secs,
+                blocklist_paths: filter.blocklist_paths,
+                allowlist_paths: filter.allowlist_paths,
+            };
+            config.validate()?;
+            return Ok(config);
+        }
+
+        // Fallback to flat format
         let config: ServerConfig = toml::from_str(&content)?;
         config.validate()?;
         Ok(config)

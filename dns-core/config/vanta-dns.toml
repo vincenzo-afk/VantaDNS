@@ -1,0 +1,17 @@
+# VantaDNS Server Configuration
+
+[server]
+bind_addr = "127.0.0.1:5354"
+upstream_addr = "127.0.0.1:5335"
+block_mode = "nxdomain" # Options: nxdomain, zero_ip
+
+[cache]
+capacity = 10000
+min_ttl_secs = 60
+max_ttl_secs = 86400
+
+[filter]
+blocklist_paths = [
+    "../config/blocklists/custom-blocklist.txt"
+]
+allowlist_paths = []
