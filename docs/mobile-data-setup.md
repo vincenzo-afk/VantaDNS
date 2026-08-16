@@ -4,100 +4,46 @@ This guide explains how to use VantaDNS over **cellular mobile data (4G/5G)** an
 
 ---
 
-## Part 1 — Using VantaDNS on Mobile Data (Cellular 4G/5G)
+## Important Notice on Android "Private DNS Server Cannot Be Accessed" Error
 
-When you disconnect from home Wi-Fi and switch to Mobile Data, standard LAN IP addresses (`10.76.181.43`) are unreachable because mobile carriers assign private cellular IPs. 
+If Android displays:
+> **"Mobile network has no internet access — Private DNS server cannot be accessed"**
 
-There are two primary methods to connect your phone to VantaDNS over Mobile Data:
+**Why this happens:**  
+1. Placeholder domain names like `dns.vantadns.net` do not exist in public DNS, so Android cannot look them up on 4G/5G.
+2. Android Private DNS requires a **trusted public TLS certificate** (such as Let's Encrypt) and rejects self-signed certificates for security.
+3. TCP Port 853 must be reachable over the Internet via router port forwarding or a private mesh network.
 
----
-
-### Method A — Personal Encrypted VPN Tunnel (Tailscale / WireGuard) — Recommended ⭐
-
-Using a personal mesh VPN (like **Tailscale**, which is 100% free for personal use) securely connects your mobile device directly to your VantaDNS server anywhere in the world without exposing public ports to hackers.
-
-#### Step 1: Install Tailscale on VantaDNS Host (PC or Android)
-1. Download and install Tailscale on your VantaDNS server host (from [tailscale.com](https://tailscale.com)).
-2. Log in with your account.
-3. Your VantaDNS host will receive a permanent, secure Tailscale IP (e.g., `100.115.82.43`).
-
-#### Step 2: Install Tailscale on Your Smartphone
-1. Install **Tailscale** from Google Play Store or Apple App Store.
-2. Log into the same Tailscale account.
-3. Toggle Tailscale **ON**.
-
-#### Step 3: Set VantaDNS as Global DNS in Tailscale Admin
-1. Open the [Tailscale Admin Console](https://login.tailscale.com/admin/dns).
-2. Under **DNS Servers** > **Add Nameserver** -> Select **Custom**.
-3. Enter your VantaDNS server's Tailscale IP (e.g., `100.115.82.43`).
-4. Enable **Override local DNS**.
-
-**Result:** Whether you are on Wi-Fi, 4G, 5G, or public hot spots, 100% of your mobile network traffic will automatically route DNS queries through VantaDNS!
+👉 **See [docs/private-dns-fix.md](file:///c:/Users/S%20K/Desktop/VantaDNS/docs/private-dns-fix.md) for full step-by-step instructions to fix this error immediately.**
 
 ---
 
-### Method B — Native Android "Private DNS" (DNS-over-TLS / DoT)
+## Solution 1 — Tailscale Personal Mesh VPN (Recommended ⭐ 100% Free & Guaranteed)
 
-Android has a built-in feature called **Private DNS** (`Settings > Network & Internet > Private DNS`) that encrypts all DNS traffic over **DNS-over-TLS (DoT)** on port 853.
+Using **Tailscale** gives you global 4G/5G DNS protection with **zero router configuration, no domain costs, and no certificate maintenance**.
 
-#### Server Setup (AdGuard Home / VantaDNS Core)
-1. Enable Encryption / DoT in AdGuard Home Settings (`Encryption Settings`).
-2. Enter your domain name (e.g., via DuckDNS / Cloudflare: `dns.yourdomain.com`).
-3. Provide TLS certificate and private key files (`fullchain.pem` and `privkey.pem`).
-4. Port `853` (TCP) must be open on your firewall.
+1. Install Tailscale on your VantaDNS server host (PC or Android).
+2. Install Tailscale on your smartphone.
+3. In [Tailscale Admin Console](https://login.tailscale.com/admin/dns), add your VantaDNS server IP as the **Global Custom DNS** and check **Override local DNS**.
+4. Set Android Private DNS back to **Automatic** or **Off** and toggle Tailscale **ON**.
 
-#### Android Smartphone Setup
-1. On your Android phone, go to **Settings** > **Network & Internet** > **Private DNS**.
-2. Select **Private DNS provider hostname**.
-3. Type your custom DoT domain name (e.g., `dns.yourdomain.com`).
-4. Tap **Save**.
+**Result:** All 4G, 5G, and Wi-Fi data traffic automatically routes DNS queries through VantaDNS!
 
 ---
 
-## Part 2 — Spotify, YouTube & In-App Ad-Blocking Technical Mechanics
+## Solution 2 — Public DuckDNS + Let's Encrypt Certificate + Router Port 853
 
-### 1. Spotify Ad Blocking
-Spotify serves banner ads, audio ads, and user analytics through specific domain endpoints. VantaDNS blocks these dedicated endpoints at the network level:
+To use native Android Private DNS (`Settings > Network & Internet > Private DNS`) without installing Tailscale:
 
-- **Blocked Endpoints:**
-  - `adclick.g.doubleclick.net`
-  - `analytics.spotify.com`
-  - `crashdump.spotify.com`
-  - `log.spotify.com`
-  - `ads-fa.spotify.com`
-- **Effect:** Prevents Spotify banner ads, audio ad tracking requests, and background telemetry from loading on desktop, mobile, and web players.
+1. Create a free public subdomain at [duckdns.org](https://www.duckdns.org) (e.g. `myvantadns.duckdns.org`).
+2. Forward TCP Port 853 on your Wi-Fi router (`10.76.181.1`) to `10.76.181.43`.
+3. Issue a free trusted Let's Encrypt certificate for `myvantadns.duckdns.org`.
+4. Enter `myvantadns.duckdns.org` into Android Private DNS.
 
 ---
 
-### 2. YouTube Ad-Blocking (DNS + Client Mechanics)
+## Media Ad-Blocking Mechanics
 
-#### How YouTube Video Ads Work
-YouTube uses two distinct mechanisms for advertising:
-1. **Ad Banners & Trackers:** Served from dedicated tracking domains (`s.youtube.com`, `ads.youtube.com`, `googleadservices.com`). **VantaDNS blocks 100% of these.**
-2. **Inline Video Stream Ads:** Served dynamically from the **exact same domain names and content delivery servers (`*.googlevideo.com`)** as the actual video content you want to watch. 
-
-> ⚠️ **Important DNS Engineering Fact:** Blocking `googlevideo.com` at the DNS level would cause all YouTube videos to fail to load or buffer indefinitely. 
-
-#### Recommended Complete 100% YouTube Ad-Free Solution:
-
-| Device | Primary Defense (VantaDNS) | Complementary Video Stream Filter | Result |
-|--------|----------------------------|-----------------------------------|--------|
-| **Android Phone** | VantaDNS (Blocks trackers & app ads) | **YouTube ReVanced** or **SmartTube** | **100% Ad-Free Video & Audio** |
-| **Android TV / FireTV** | VantaDNS (Blocks network telemetry) | **SmartTube** | **100% Ad-Free TV Experience** |
-| **PC / Laptop** | VantaDNS (Blocks domain ads & tracking) | **uBlock Origin** or **Brave Browser** | **100% Ad-Free Web Browsing** |
-| **iOS (iPhone/iPad)** | VantaDNS (Blocks app tracking & ads) | **Brave Browser / Video Lite** | **100% Ad-Free Video Playback** |
-
----
-
-## Part 3 — Mobile App Ad Blocking (In-App Ads)
-
-VantaDNS blocks all major mobile ad networks used by free Android & iOS games/apps:
-- **UnityAds:** `unityads.unity3d.com`
-- **AppLovin:** `applovin.com`
-- **Vungle:** `ads.vungle.com`
-- **InMobi:** `inmobi.com`
-- **IronSource:** `ironsource.com`
-- **Tapjoy:** `tapjoy.com`
-- **AdColony:** `adcolony.com`
-
-**Result:** When playing games or using mobile apps on Mobile Data or Wi-Fi, pop-up video ads and banner ads fail to load, saving mobile bandwidth and battery life.
+- **Spotify:** Blocks `spclient.wg.spotify.com`, `analytics.spotify.com`, `log.spotify.com`, and `adclick.g.doubleclick.net`.
+- **YouTube:** Blocks `s.youtube.com`, `ads.youtube.com`, and `googleadservices.com`.
+- **Mobile Apps:** Blocks UnityAds, AppLovin, Vungle, InMobi, IronSource, Tapjoy, and AdColony across mobile apps/games.
