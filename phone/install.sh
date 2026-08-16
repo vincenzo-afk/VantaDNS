@@ -17,7 +17,7 @@
 set -euo pipefail
 
 VANTA_DIR="$HOME/VantaDNS"
-ARCHIVE_URL="https://github.com/vincenzo-afk/VantaDNS/releases/download/latest/vanta-dns-core-aarch64-android"
+ARCHIVE_URL="https://github.com/vincenzo-afk/VantaDNS/releases/latest/download/vanta-dns-core-aarch64-android"
 
 green()  { echo -e "\033[32m$1\033[0m"; }
 red()    { echo -e "\033[31m$1\033[0m"; }
