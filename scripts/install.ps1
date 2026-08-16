@@ -27,15 +27,17 @@ $AGH_DIR        = "$INSTALL_DIR\adguardhome"
 $UNBOUND_DIR    = "$INSTALL_DIR\unbound"
 $REPO_ROOT      = Split-Path -Parent $PSScriptRoot
 
-# AdGuard Home — latest stable release (update URL if a newer version is available)
+# AdGuard Home — latest stable release
 $AGH_VERSION    = "v0.107.52"
 $AGH_URL        = "https://github.com/AdguardTeam/AdGuardHome/releases/download/$AGH_VERSION/AdGuardHome_windows_amd64.zip"
 $AGH_ZIP        = "$env:TEMP\AdGuardHome.zip"
+$AGH_ZIP_LOCAL  = "$REPO_ROOT\downloads\AdGuardHome_${AGH_VERSION}_windows_amd64.zip"
 
-# Unbound — NLnet Labs Windows build
-$UNBOUND_VERSION = "1.22.0"
-$UNBOUND_URL    = "https://nlnetlabs.nl/downloads/unbound/unbound-$UNBOUND_VERSION.zip"
-$UNBOUND_ZIP    = "$env:TEMP\unbound.zip"
+# Unbound — NLnet Labs Windows setup installer
+$UNBOUND_VERSION  = "1.26.0"
+$UNBOUND_URL      = "https://nlnetlabs.nl/downloads/unbound/unbound_setup_$UNBOUND_VERSION.exe"
+$UNBOUND_INSTALLER= "$env:TEMP\unbound_setup.exe"
+$UNBOUND_LOCAL    = "$REPO_ROOT\downloads\unbound_setup_$UNBOUND_VERSION.exe"
 
 # Root hints URL
 $ROOT_HINTS_URL = "https://www.internic.net/domain/named.root"
@@ -130,49 +132,42 @@ foreach ($dir in $dirs) {
 # ============================================================
 Write-Step "Downloading Unbound $UNBOUND_VERSION"
 
-if (Get-Service -Name "Unbound" -ErrorAction SilentlyContinue) {
-    Write-Warn "Unbound service already exists. Stopping and reinstalling."
-    Stop-ServiceIfRunning "Unbound"
-    & "$UNBOUND_DIR\unbound-service-install.exe" /uninstall 2>$null
-    Start-Sleep -Seconds 2
-}
-
 try {
-    Write-Host "  Downloading from $UNBOUND_URL ..."
-    # Try NLnet Labs direct URL; fall back to GitHub mirror if needed
-    Invoke-WebRequest -Uri $UNBOUND_URL -OutFile $UNBOUND_ZIP -UseBasicParsing -TimeoutSec 120
-    Write-OK "Unbound downloaded"
+    Write-Host "  Downloading Unbound installer from NLnet Labs..."
+    Invoke-WebRequest -Uri $UNBOUND_URL -OutFile $UNBOUND_INSTALLER -UseBasicParsing -TimeoutSec 300
+    Write-OK "Unbound installer downloaded"
 } catch {
-    Write-Warn "Primary URL failed. Trying alternative download..."
-    # Alternative: download from a known stable mirror
-    $ALT_URL = "https://downloads.nlnetlabs.nl/unbound/unbound-$UNBOUND_VERSION.zip"
-    try {
-        Invoke-WebRequest -Uri $ALT_URL -OutFile $UNBOUND_ZIP -UseBasicParsing -TimeoutSec 120
-        Write-OK "Unbound downloaded (alternative URL)"
-    } catch {
-        Write-Fail "Could not download Unbound. Check your Internet connection and the version in this script. Manual download: https://nlnetlabs.nl/downloads/unbound/"
-    }
+    Write-Fail "Could not download Unbound from $UNBOUND_URL`nManual download: https://nlnetlabs.nl/downloads/unbound/"
 }
 
-Write-Step "Extracting Unbound"
-Expand-Archive -Path $UNBOUND_ZIP -DestinationPath "$env:TEMP\unbound_extract" -Force
-# NLnet Labs zip has files directly in a subdirectory
-$unboundSource = Get-ChildItem "$env:TEMP\unbound_extract" -Directory | Select-Object -First 1
-if (-not $unboundSource) {
-    # Files may be directly in extract dir
-    $unboundSource = "$env:TEMP\unbound_extract"
-} else {
-    $unboundSource = $unboundSource.FullName
+Write-Step "Installing Unbound (silent install to C:\Program Files\Unbound)"
+# NLnet Labs setup.exe supports /S for silent installation
+& $UNBOUND_INSTALLER /S 2>&1 | ForEach-Object { Write-Host "    $_" }
+Start-Sleep -Seconds 10  # Allow installer to complete
+
+# The installer places files in C:\Program Files\Unbound\
+$UNBOUND_INSTALL_PATH = "C:\Program Files\Unbound"
+if (-not (Test-Path "$UNBOUND_INSTALL_PATH\unbound.exe")) {
+    Write-Fail "Unbound installation failed. unbound.exe not found at $UNBOUND_INSTALL_PATH"
 }
-Copy-Item "$unboundSource\*" -Destination $UNBOUND_DIR -Recurse -Force
-Write-OK "Unbound extracted to $UNBOUND_DIR"
+Write-OK "Unbound installed to $UNBOUND_INSTALL_PATH"
+
+# Copy our custom config
+Copy-Item "$REPO_ROOT\config\unbound\unbound.conf" "$UNBOUND_INSTALL_PATH\unbound.conf" -Force
+# Update paths in config to match installer location
+(Get-Content "$UNBOUND_INSTALL_PATH\unbound.conf") `
+    -replace [regex]::Escape('C:\\ProgramData\\VantaDNS\\unbound\\root.hints'), "$UNBOUND_INSTALL_PATH\\root.hints" `
+    -replace [regex]::Escape('C:\\ProgramData\\VantaDNS\\unbound\\root.key'),  "$UNBOUND_INSTALL_PATH\\root.key" |`
+    Set-Content "$UNBOUND_INSTALL_PATH\unbound.conf"
+Write-OK "unbound.conf deployed"
 
 # ============================================================
 # STEP 4 — Fetch root hints
 # ============================================================
 Write-Step "Fetching DNS root hints"
 
-$rootHintsPath = "$UNBOUND_DIR\root.hints"
+$UNBOUND_INSTALL_PATH = "C:\Program Files\Unbound"
+$rootHintsPath = "$UNBOUND_INSTALL_PATH\root.hints"
 try {
     Invoke-WebRequest -Uri $ROOT_HINTS_URL -OutFile $rootHintsPath -UseBasicParsing -TimeoutSec 30
     Write-OK "Root hints saved to $rootHintsPath"
@@ -180,62 +175,53 @@ try {
     Write-Fail "Could not fetch root hints from $ROOT_HINTS_URL. Check Internet connectivity."
 }
 
-# ============================================================
-# STEP 5 — Configure Unbound
-# ============================================================
-Write-Step "Configuring Unbound"
-
-# Copy our config with correct paths substituted
-$unboundConfig = Get-Content "$REPO_ROOT\config\unbound\unbound.conf" -Raw
-# Replace template paths with actual install paths
-$unboundConfig = $unboundConfig -replace [regex]::Escape("C:\\ProgramData\\VantaDNS\\unbound\\root.hints"), "$UNBOUND_DIR\root.hints"
-$unboundConfig = $unboundConfig -replace [regex]::Escape("C:\\ProgramData\\VantaDNS\\unbound\\root.key"),  "$UNBOUND_DIR\root.key"
-
-$unboundConfig | Set-Content "$UNBOUND_DIR\unbound.conf" -Encoding UTF8
-Write-OK "unbound.conf written to $UNBOUND_DIR\unbound.conf"
-
 # Initialize DNSSEC root trust anchor
-Write-Host "  Initializing DNSSEC root trust anchor (this may take a moment)..."
-if (Test-Path "$UNBOUND_DIR\unbound-anchor.exe") {
-    & "$UNBOUND_DIR\unbound-anchor.exe" -a "$UNBOUND_DIR\root.key" 2>&1 | ForEach-Object { Write-Host "    $_" }
-    Write-OK "DNSSEC trust anchor initialized: $UNBOUND_DIR\root.key"
+Write-Host "  Initializing DNSSEC root trust anchor..."
+$UNBOUND_INSTALL_PATH = "C:\Program Files\Unbound"
+if (Test-Path "$UNBOUND_INSTALL_PATH\unbound-anchor.exe") {
+    & "$UNBOUND_INSTALL_PATH\unbound-anchor.exe" -a "$UNBOUND_INSTALL_PATH\root.key" 2>&1 | ForEach-Object { Write-Host "    $_" }
+    Write-OK "DNSSEC trust anchor initialized: $UNBOUND_INSTALL_PATH\root.key"
 } else {
-    Write-Warn "unbound-anchor.exe not found. DNSSEC auto-trust anchor will not be pre-seeded."
-    Write-Warn "Unbound will attempt to bootstrap DNSSEC on first start."
+    Write-Warn "unbound-anchor.exe not found in install path."
 }
 
 # ============================================================
-# STEP 6 — Install Unbound as Windows service
+# STEP 6 — Start Unbound service (installer registers it)
 # ============================================================
-Write-Step "Installing Unbound Windows service"
+Write-Step "Starting Unbound Windows service"
+$UNBOUND_INSTALL_PATH = "C:\Program Files\Unbound"
 
-if (Test-Path "$UNBOUND_DIR\unbound-service-install.exe") {
-    & "$UNBOUND_DIR\unbound-service-install.exe" -c "$UNBOUND_DIR\unbound.conf" 2>&1 | ForEach-Object { Write-Host "    $_" }
+# The NLnet Labs installer creates a service named 'Unbound'
+# Restart it to pick up our custom config
+if (Get-Service -Name "Unbound" -ErrorAction SilentlyContinue) {
+    # Stop the service, apply our config, then restart
+    Stop-ServiceIfRunning "Unbound"
+    Copy-Item "$REPO_ROOT\config\unbound\unbound.conf" "$UNBOUND_INSTALL_PATH\unbound.conf" -Force
+    # Patch config paths for the installer's directory
+    (Get-Content "$UNBOUND_INSTALL_PATH\unbound.conf") `
+        -replace [regex]::Escape('C:\\ProgramData\\VantaDNS\\unbound\\root.hints'), ($UNBOUND_INSTALL_PATH.Replace('\','\\') + '\\root.hints') `
+        -replace [regex]::Escape('C:\\ProgramData\\VantaDNS\\unbound\\root.key'),  ($UNBOUND_INSTALL_PATH.Replace('\','\\') + '\\root.key') |`
+        Set-Content "$UNBOUND_INSTALL_PATH\unbound.conf" -Encoding UTF8
+    Start-Service -Name "Unbound"
+    Start-Sleep -Seconds 5
 } else {
-    # Fallback: use sc.exe if the installer isn't present
-    & sc.exe create "Unbound" binPath= "`"$UNBOUND_DIR\unbound.exe`" -c `"$UNBOUND_DIR\unbound.conf`" -s" start= auto DisplayName= "Unbound DNS Resolver (VantaDNS)"
+    Write-Warn "Unbound service not found after installation. The installer may have used a different service name."
+    Write-Warn "Check: Get-Service | Where-Object {`$_.Name -like '*unbound*'}"
 }
 
-Set-Service -Name "Unbound" -StartupType Automatic
-Start-Service -Name "Unbound"
-Start-Sleep -Seconds 3
-
-$unboundSvc = Get-Service -Name "Unbound"
-if ($unboundSvc.Status -eq "Running") {
+$unboundSvc = Get-Service -Name "Unbound" -ErrorAction SilentlyContinue
+if ($unboundSvc -and $unboundSvc.Status -eq "Running") {
     Write-OK "Unbound service is Running"
 } else {
     Write-Warn "Unbound service status: $($unboundSvc.Status). Check event log for errors."
-    Write-Warn "  Event log: Get-EventLog -LogName System -Source 'Unbound' -Newest 10"
 }
 
-# Verify Unbound responds
-Start-Sleep -Seconds 2
+Start-Sleep -Seconds 3
 try {
     $result = Resolve-DnsName -Name "google.com" -Server "127.0.0.1" -Port 5335 -Type A -ErrorAction Stop
     Write-OK "Unbound DNS test: google.com → $($result | Where-Object {$_.Type -eq 'A'} | Select-Object -First 1 -ExpandProperty IPAddress)"
 } catch {
-    Write-Warn "Unbound DNS test failed: $_"
-    Write-Warn "This may be normal if Unbound is still initializing. Try manually: nslookup -port=5335 google.com 127.0.0.1"
+    Write-Warn "Unbound DNS test failed: $_`nMay still be initializing. Test: nslookup -port=5335 google.com 127.0.0.1"
 }
 
 # ============================================================

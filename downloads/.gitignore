@@ -1,0 +1,9 @@
+# VantaDNS downloads — binaries are large and not committed
+# They are downloaded by install.ps1 or placed here manually
+*.exe
+*.zip
+*.msi
+*.pkg
+
+# But keep this file itself
+!.gitignore
