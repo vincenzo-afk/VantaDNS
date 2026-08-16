@@ -1,0 +1,37 @@
+# VantaDNS — Fly.io deployment
+# The Fly Proxy terminates TLS (managed Let's Encrypt cert for *.fly.dev)
+# using the "tls" handler and forwards plaintext DNS-over-TCP here.
+#
+# Deploy:  fly launch / fly deploy
+# Android Private DNS: vanta-dns.fly.dev
+
+app = 'vanta-dns'
+primary_region = 'sin'
+
+[build]
+dockerfile = "Dockerfile"
+
+[env]
+VANTA_DNS_UPSTREAMS = "tcp:1.1.1.1:53,tcp:8.8.8.8:53,udp:1.1.1.1:53,udp:9.9.9.9:53"
+VANTA_DNS_CONFIG = "/data/vanta-dns.toml"
+
+# Main service: plain DNS-over-TCP on 853, Fly Proxy handles TLS (DoT).
+[[services]]
+  protocol = "tcp"
+  internal_port = 853
+
+  [[services.ports]]
+    port = 853
+    # TLS handler: Fly terminates TLS with its managed cert and forwards
+    # plaintext (RFC 7858 length-framed DNS) to the app.
+    handlers = ["tls"]
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 1000
+    soft_limit = 900
+
+  [[services.tcp_checks]]
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "5s"

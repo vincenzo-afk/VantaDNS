@@ -1,0 +1,24 @@
+# Local test config: TCP + TLS (self-signed) on port 853.
+
+[server]
+bind_addr = "127.0.0.1:5353"
+tls_port = 853
+upstream_addr = "127.0.0.1:5335"
+upstreams = [
+    "tcp:1.1.1.1:53",
+    "tcp:8.8.8.8:53",
+    "udp:1.1.1.1:53"
+]
+tcp_enabled = true
+tls_enabled = true
+block_mode = "nxdomain"
+logging_enabled = false
+
+[cache]
+capacity = 10000
+min_ttl_secs = 60
+max_ttl_secs = 86400
+
+[filter]
+blocklist_paths = ["/tmp/vantadns-test/blocklist.txt"]
+allowlist_paths = []

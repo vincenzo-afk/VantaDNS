@@ -1,0 +1,11 @@
+.git
+.gitignore
+docs
+scripts
+*.ps1
+*.md
+!README.md
+target
+fly.toml
+render.yaml
+deploy-notes.md

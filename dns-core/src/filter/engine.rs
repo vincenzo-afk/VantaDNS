@@ -62,6 +62,19 @@ impl FilterEngine {
         FilterResult::Allowed
     }
 
+    /// Load allowlist rules from file content (one rule per line; @@ prefix optional).
+    pub fn load_allowlist_content(&mut self, content: &str) -> usize {
+        let mut count = 0;
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if !trimmed.is_empty() && !trimmed.starts_with('#') && !trimmed.starts_with('!') {
+                self.load_allowlist_rule(trimmed);
+                count += 1;
+            }
+        }
+        count
+    }
+
     pub fn blocklist_rule_count(&self) -> usize {
         self.blocklist.len()
     }

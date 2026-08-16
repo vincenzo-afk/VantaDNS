@@ -1,17 +1,42 @@
-# VantaDNS Server Configuration
+# VantaDNS Server Configuration (cloud-ready)
+#
+# For local testing / self-hosted DoT: set tcp_enabled = true and tls_enabled = true
+# with cert/key paths. For Fly.io / Render-style deployments the platform terminates
+# TLS and forwards plaintext framed DNS, so tcp_enabled = true is all you need.
 
 [server]
-bind_addr = "127.0.0.1:5354"
+# Bind on all interfaces so the container/port-forward is reachable.
+bind_addr = "0.0.0.0:853"
+# Legacy single-upstream fallback (only used when `upstreams` is empty).
 upstream_addr = "127.0.0.1:5335"
-block_mode = "nxdomain" # Options: nxdomain, zero_ip
+# Cloud upstream chain: try Cloudflare & Google over TCP, fall back to UDP.
+upstreams = [
+    "tcp:1.1.1.1:53",
+    "tcp:8.8.8.8:53",
+    "udp:1.1.1.1:53"
+]
+# Plain-TCP DNS listener (RFC 1035 length framing) — REQUIRED for DoT.
+# On Fly.io, the TLS handler terminates TLS and hands plaintext here.
+tcp_enabled = true
+# Standalone app-terminated TLS (self-hosted DoT without a proxy).
+tls_enabled = false
+# tls_cert_path = "certs/tls.crt"
+# tls_key_path = "certs/tls.key"
+block_mode = "nxdomain"
+logging_enabled = false
 
 [cache]
-capacity = 10000
+capacity = 50000
 min_ttl_secs = 60
 max_ttl_secs = 86400
 
 [filter]
 blocklist_paths = [
-    "../config/blocklists/custom-blocklist.txt"
+    "/data/blocklists/custom-blocklist.txt",
+    "/data/blocklists/mobile-app-ads.txt",
+    "/data/blocklists/spotify-ad-blocklist.txt",
+    "/data/blocklists/youtube-ad-blocklist.txt"
 ]
-allowlist_paths = []
+allowlist_paths = [
+    "/data/allowlists/custom-allowlist.txt"
+]

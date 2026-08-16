@@ -116,3 +116,18 @@ Created `dns-core/` standalone Rust project containing:
 | No auto-update for AdGuard Home | Control when updates are applied | 2026-08-16 |
 | DNSSEC validation enabled | Reject forged DNS responses for DNSSEC-signed zones | 2026-08-16 |
 | Unbound loopback-only | Unbound must never be a direct public resolver | 2026-08-16 |
+
+## 2026-08-16 — Cloud-ready DoT rewrite (v0.2.0)
+
+- Added plain DNS-over-TCP (RFC 1035 length framing) and DNS-over-TLS (RFC 7858,
+  RFC 8446 via tokio-rustls) listeners to dns-core. Standalone TLS enabled via
+  TLS_CERT/TLS_KEY env vars; TLS binds its own port (tls_port, default 853).
+- Replaced local Unbound dependency: resolver now forwards to a chain of
+  configurable upstreams over TCP/UDP (e.g. tcp:1.1.1.1:53, udp:9.9.9.9:53)
+  with first-success fallback — the container is fully standalone.
+- Blocklists (mobile ads, Spotify, YouTube, custom + adguard-base) and
+  allowlists load at startup from /data paths; block_mode nxdomain|zero_ip.
+- Added Dockerfile (rust:1-bookworm -> alpine multi-stage), fly.toml
+  (Fly TLS handler on 853), render.yaml (alternative), config/docker-vanta-dns.toml,
+  tests/dot_integration.rs (TCP + TLS against live server), docs/cloud-deployment.md.
+- All unit tests pass; integration test passes TCP/TLS resolution + blocking.

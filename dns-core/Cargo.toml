@@ -16,6 +16,15 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror = "1.0"
 lru = "0.12"
 ahash = "0.8"
+tokio-rustls = { version = "0.26", optional = true }
+rustls-pemfile = { version = "2", optional = true }
+rcgen = { version = "0.13", optional = true }
 
 [dev-dependencies]
 tokio-test = "0.4"
+futures = "0.3"
+tokio-rustls = "0.26"
+
+[features]
+default = ["tls"]
+tls = ["dep:tokio-rustls", "dep:rustls-pemfile", "dep:rcgen"]

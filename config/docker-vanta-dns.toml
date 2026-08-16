@@ -1,0 +1,40 @@
+# VantaDNS container config (Fly.io / Render / any Docker host)
+#
+# On Fly.io: TLS is terminated by the Fly Proxy (`handlers = ["tls"]` on port 853)
+# and plaintext framed DNS is forwarded here, so this image only needs the TCP
+# listener. TLS_CERT/TLS_KEY env vars enable the standalone app-terminated DoT
+# listener (useful for self-hosting behind no proxy).
+
+[server]
+bind_addr = "0.0.0.0:853"
+upstream_addr = "127.0.0.1:5335"
+upstreams = [
+    "tcp:1.1.1.1:53",
+    "tcp:8.8.8.8:53",
+    "udp:1.1.1.1:53",
+    "udp:9.9.9.9:53"
+]
+# Plain TCP (RFC 1035 length framing) — required for DoT; Fly Proxy's TLS
+# handler hands plaintext to this listener.
+tcp_enabled = true
+# Standalone TLS (only when hosting without a TLS-terminating proxy):
+# tls_enabled = true  (enabled automatically when TLS_CERT + TLS_KEY are set)
+block_mode = "nxdomain"
+logging_enabled = false
+
+[cache]
+capacity = 50000
+min_ttl_secs = 60
+max_ttl_secs = 86400
+
+[filter]
+blocklist_paths = [
+    "/data/blocklists/custom-blocklist.txt",
+    "/data/blocklists/mobile-app-ads.txt",
+    "/data/blocklists/spotify-ad-blocklist.txt",
+    "/data/blocklists/youtube-ad-blocklist.txt",
+    "/data/blocklists/adguard-base.txt"
+]
+allowlist_paths = [
+    "/data/allowlists/custom-allowlist.txt"
+]

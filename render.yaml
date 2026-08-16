@@ -1,0 +1,29 @@
+# VantaDNS — Render deployment (web service + Docker)
+#
+# IMPORTANT (as of Aug 2026):
+# - Render FREE web services only forward HTTP/HTTPS; raw TCP on 853 is NOT
+#   exposed publicly, so Android Private DNS (DoT) cannot use the free plan.
+# - Paid Render web services expose HTTPS (port 443) with managed TLS. Since
+#   DoT is just TLS over TCP, Android Private DNS can connect to a DoT server
+#   that listens on the port the Load Balancer forwards. The LB forwards 443
+#   to the service's internal port, which we configure to 853 -> the app's
+#   TLS listener must speak real TLS (RFC 8446) on that internal port.
+#   Render's LB passes TLS through on port 443 (TLS passthrough), so your
+#   app must terminate TLS with a certificate that matches the public
+#   hostname. Render does NOT issue certs for passthrough on private ports,
+#   so this requires a custom domain whose cert you supply — complex and
+#   fragile for DoT.
+#
+# Cheapest reliable DoT path remains Fly.io Hobby (~$2/mo) or any $4-6/mo VPS.
+services:
+  - type: web
+    name: vanta-dns
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: VANTA_DNS_UPSTREAMS
+        value: tcp:1.1.1.1:53,tcp:8.8.8.8:53,udp:1.1.1.1:53,udp:9.9.9.9:53
+      - key: TLS_CERT
+        value: /data/certs/tls.crt
+      - key: TLS_KEY
+        value: /data/certs/tls.key
