@@ -56,8 +56,9 @@ curl -sSL "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt" 
     -o "$VANTA_DIR/config/blocklists/adguard-base.txt" || \
     red "  AdGuard list fetch failed (offline?) — bundled lists still apply"
 
-step "Installing the local DNS VPN wrapper"
+step "Installing the local DNS VPN wrapper (always refresh existing copy)"
 cp "$VANTA_DIR/phone/vanta-vpn.sh" "$VANTA_DIR/bin/"
+cp "$VANTA_DIR/phone/dns-udp-forwarder.py" "$VANTA_DIR/bin/"
 chmod +x "$VANTA_DIR/bin/vanta-vpn.sh"
 
 step "Setting up boot autostart (Termux:Boot)"
