@@ -3,8 +3,9 @@
 # Keep secrets, local-state, and binaries OUT of version control
 # ============================================================
 
-# --- AdGuard Home runtime state (contains credentials & query log) ---
-config/adguard/AdGuardHome.yaml
+# --- Runtime binaries & state ---
+bin/
+run/
 config/adguard/data/
 config/adguard/querylog.json
 config/adguard/stats.db
