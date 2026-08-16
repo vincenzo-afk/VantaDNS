@@ -3,6 +3,10 @@
 # scripts/health-check.ps1
 # ============================================================
 
+Param(
+    [switch]$ForceCheck
+)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'SilentlyContinue'
 
@@ -16,6 +20,10 @@ $GATEWAY_IP       = '10.76.181.1'          # Home router
 $INTERNET_CHECK   = '9.9.9.9'              # Quad9, used as reachability probe
 $TEST_DOMAIN      = 'one.one.one.one'       # Well-known, always resolves
 $BLOCKED_DOMAIN   = 'doubleclick.net'       # Should be blocked
+
+# Nightly Sleeping Window Settings (11:00 PM to 08:00 AM)
+$SLEEP_START_HOUR = 23
+$SLEEP_END_HOUR   = 8
 
 # ============================================================
 # HELPERS
@@ -31,6 +39,11 @@ function Write-Header {
     Write-Host '  -------------------------------------------------' -ForegroundColor DarkGray
     Write-Host "  Timestamp: [$([System.DateTime]::Now.ToString('yyyy-MM-dd HH:mm:ss'))]" -ForegroundColor DarkGray
     Write-Host ''
+}
+
+function Test-NightlyWindow {
+    $currentHour = [int](Get-Date -Format 'HH')
+    return ($currentHour -ge $SLEEP_START_HOUR -or $currentHour -lt $SLEEP_END_HOUR)
 }
 
 function Check-Item {
@@ -125,6 +138,17 @@ function Test-AghApiReachable {
 # MAIN CHECKS
 # ============================================================
 Write-Header
+
+# Check Nightly Sleeping Window
+if (Test-NightlyWindow -and -not $ForceCheck) {
+    Write-Host '  SYSTEM STATE: [ STANDBY / NIGHTLY WINDOW ]' -ForegroundColor DarkYellow
+    Write-Host '  Scheduled low-power window (11:00 PM - 08:00 AM).' -ForegroundColor DarkYellow
+    Write-Host '  Health checks and active probes are paused to conserve power and reduce logging.' -ForegroundColor DarkYellow
+    Write-Host ''
+    Write-Host '  Tip: Run .\scripts\health-check.ps1 -ForceCheck to override sleep window.' -ForegroundColor Gray
+    Write-Host ''
+    exit 0
+}
 
 Write-Host '  [ Services ]' -ForegroundColor White
 $aghRunning     = Check-Item 'AdGuard Home engine' (Test-ComponentRunning 'AdGuardHome')
