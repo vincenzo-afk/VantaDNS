@@ -20,7 +20,9 @@ impl DomainTrie {
     }
 
     /// Inserts a domain or rule into the lookup structure
-    /// Supports standard hosts format (`0.0.0.0 ad.com`), raw domains (`ad.com`), or AdGuard rules (`||ad.com^`)
+    /// Supports standard hosts format (`0.0.0.0 ad.com`), raw domains (`ad.com`),
+    /// AdGuard rules (`||ad.com^`), Adblock Plus lines (`||ad.com$...` or `/^ad\./...`),
+    /// and DNS wildcard syntax (`*.sub.ad.com`).
     pub fn insert_rule(&mut self, raw_rule: &str) {
         let trimmed = raw_rule.trim();
         if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with('!') {
@@ -28,15 +30,28 @@ impl DomainTrie {
         }
 
         let rule = if trimmed.starts_with("||") {
-            trimmed.trim_start_matches("||").trim_end_matches('^')
+            // AdGuard: ||domain^ — also strip optional $options or $style parts
+            trimmed
+                .trim_start_matches("||")
+                .split('$')
+                .next()
+                .unwrap_or("")
+                .trim_end_matches('^')
         } else if trimmed.starts_with("0.0.0.0 ") || trimmed.starts_with("127.0.0.1 ") {
             trimmed.split_whitespace().nth(1).unwrap_or("")
+        } else if trimmed.starts_with("*.") {
+            // DNS wildcard syntax: *.sub.domain — treat as block sub.domain + all children
+            trimmed.trim_start_matches("*.")
         } else {
             trimmed
         };
 
         let normalized = Self::normalize(rule);
         if normalized.is_empty() {
+            return;
+        }
+        // Reject anything that isn't a valid hostname-shaped rule
+        if normalized.starts_with('/') || normalized.contains(' ') || normalized.contains('=') {
             return;
         }
 

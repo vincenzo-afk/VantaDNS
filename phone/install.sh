@@ -50,16 +50,25 @@ else
     chmod +x "$VANTA_DIR/bin/vanta-dns-core"
 fi
 
-step "Fetching the latest AdGuard base blocklist"
+step "Fetching the maximum blocklists"
 mkdir -p "$VANTA_DIR/config/blocklists"
-curl -sSL "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt" \
+curl -sSL --max-time 90 "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt" \
     -o "$VANTA_DIR/config/blocklists/adguard-base.txt" || \
-    red "  AdGuard list fetch failed (offline?) — bundled lists still apply"
+    red "  AdGuard base fetch failed (offline?) — bundled lists still apply"
+curl -sSL --max-time 90 "https://adguardteam.github.io/HostlistsRegistry/assets/filter_2.txt" \
+    -o "$VANTA_DIR/config/blocklists/adguard-dns-filter.txt" || true
+curl -sSL --max-time 90 "https://big.oisd.nl/" \
+    -o "$VANTA_DIR/config/blocklists/oisd-big.txt" || true
+curl -sSL --max-time 90 "https://kadantiscam.netlify.app/kadhosts.txt" \
+    -o "$VANTA_DIR/config/blocklists/kadhosts.txt" || true
+curl -sSL --max-time 90 "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.txt" \
+    -o "$VANTA_DIR/config/blocklists/hagezi-pro-wild.txt" || true
 
 step "Installing the local DNS VPN wrapper (always refresh existing copy)"
 cp "$VANTA_DIR/phone/vanta-vpn.sh" "$VANTA_DIR/bin/"
 cp "$VANTA_DIR/phone/dns-udp-forwarder.py" "$VANTA_DIR/bin/"
-chmod +x "$VANTA_DIR/bin/vanta-vpn.sh"
+cp "$VANTA_DIR/phone/update-blocklists.sh" "$VANTA_DIR/bin/"
+chmod +x "$VANTA_DIR/bin/vanta-vpn.sh" "$VANTA_DIR/bin/update-blocklists.sh"
 
 step "Setting up boot autostart (Termux:Boot)"
 mkdir -p "$HOME/.termux/boot"

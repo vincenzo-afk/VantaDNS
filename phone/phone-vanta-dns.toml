@@ -27,7 +27,11 @@ blocklist_paths = [
     "$HOME/VantaDNS/config/blocklists/mobile-app-ads.txt",
     "$HOME/VantaDNS/config/blocklists/spotify-ad-blocklist.txt",
     "$HOME/VantaDNS/config/blocklists/youtube-ad-blocklist.txt",
-    "$HOME/VantaDNS/config/blocklists/adguard-base.txt"
+    "$HOME/VantaDNS/config/blocklists/adguard-base.txt",
+    "$HOME/VantaDNS/config/blocklists/adguard-dns-filter.txt",
+    "$HOME/VantaDNS/config/blocklists/oisd-big.txt",
+    "$HOME/VantaDNS/config/blocklists/kadhosts.txt",
+    "$HOME/VantaDNS/config/blocklists/hagezi-pro-wild.txt"
 ]
 allowlist_paths = [
     "$HOME/VantaDNS/allowlists/custom-allowlist.txt"
