@@ -1,0 +1,16 @@
+# VantaDNS — Custom Blocklist
+# ============================================================
+# Add domains here that you want to block in addition to the
+# curated blocklists.
+#
+# Format: AdGuard DNS filtering rules (same as uBlock Origin)
+#
+# Examples:
+#   ||example-bad-domain.com^          Block exact domain + all subdomains
+#   ||ads.example.com^                 Block a specific subdomain
+#   /banner/*/img^                     Block URLs matching pattern
+#
+# See: https://adguard.com/kb/general/ad-filtering/create-own-filters/
+# ============================================================
+
+# Personal additions go below this line:

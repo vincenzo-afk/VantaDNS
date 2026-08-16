@@ -1,10 +1,11 @@
 @echo off
 :: ============================================================
-:: VantaDNS — Install Launcher
-:: Double-click this to run the full installer as Administrator
+:: VantaDNS — Elevated Service Setup
+:: Double-click this once. Click YES on the UAC prompt.
+:: A blue PowerShell window will open and complete setup.
 :: ============================================================
-echo VantaDNS Installer — requesting Administrator privileges...
-powershell -Command "Start-Process powershell -ArgumentList '-NoProfile -ExecutionPolicy RemoteSigned -File \"%~dp0scripts\install.ps1\"' -Verb RunAs -Wait"
+echo Requesting Administrator privileges for VantaDNS setup...
+powershell -Command "Start-Process powershell -ArgumentList '-NoProfile -ExecutionPolicy RemoteSigned -File ""%~dp0scripts\setup-services.ps1"" -RepoRoot ""%~dp0.""" -Verb RunAs -Wait"
 echo.
-echo If the installer window closed, check the result in the powershell window.
-pause
+echo Setup complete. Press any key to close.
+pause > nul
