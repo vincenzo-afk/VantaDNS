@@ -22,18 +22,23 @@ mkdir -p "$LISTS"
 fetch() {
     local url="$1" out="$2"
     local tmp="$out.tmp"
-    if curl -sSL --max-time 90 "$url" -o "$tmp"; then
-        if grep -qE "^[a-z0-9*.]" "$tmp" 2>/dev/null; then
-            mv "$tmp" "$out"
-            green "  fetched: $out ($(wc -l < "$out") lines)"
-        else
-            rm -f "$tmp"
-            echo "  skip $out (empty/invalid response)"
+    # Retry with backoff + keep partially-downloaded file for resume
+    local attempt=1
+    local max_attempts=5
+    while [ "$attempt" -le "$max_attempts" ]; do
+        if curl -sSL -C - --retry 3 --retry-all-errors --max-time 120 "$url" -o "$tmp" 2>/dev/null; then
+            if grep -qE "^[a-z0-9*.]" "$tmp" 2>/dev/null; then
+                mv "$tmp" "$out"
+                green "  fetched: $out ($(wc -l < "$out") lines)"
+                return 0
+            fi
         fi
-    else
-        rm -f "$tmp"
-        echo "  skip $out (network error — will retry next time)"
-    fi
+        echo "  retrying $out ($attempt/$max_attempts)..."
+        attempt=$((attempt + 1))
+        sleep 3
+    done
+    rm -f "$tmp"
+    echo "  skip $out (network error — will retry next time)"
 }
 
 step "Downloading maximum blocklists"
