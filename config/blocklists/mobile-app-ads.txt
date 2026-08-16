@@ -1,0 +1,27 @@
+# VantaDNS — Mobile App Ad Networks Blocklist
+# ============================================================
+# Blocks in-app mobile advertising networks across Android & iOS apps
+# ============================================================
+
+||unityads.unity3d.com^
+||config.unityads.unity3d.com^
+||auction.unityads.unity3d.com^
+||webview.unityads.unity3d.com^
+||applovin.com^
+||prod-a.applovin.com^
+||rt.applovin.com^
+||vungle.com^
+||ads.vungle.com^
+||inmobi.com^
+||config.inmobi.com^
+||ironsource.com^
+||init.supersonicads.com^
+||tapjoy.com^
+||ads.tapjoy.com^
+||adcolony.com^
+||ads.adcolony.com^
+||mbridge.com^
+||mbridge.ws^
+||mopub.com^
+||flurry.com^
+||chartboost.com^

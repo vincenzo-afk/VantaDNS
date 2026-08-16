@@ -1,0 +1,20 @@
+# VantaDNS — YouTube Tracking & Ad Server Blocklist
+# ============================================================
+# Blocks YouTube tracking, telemetry, ad banners, and ad servers
+# Note: YouTube video ads are served inline via HTTPS from googlevideo.com.
+# Blocking s.youtube.com and googleadservices.com reduces ad tracking & frequency.
+# ============================================================
+
+||s.youtube.com^
+||ads.youtube.com^
+||ad.youtube.com^
+||youtube.ad.com^
+||youtube-ui.l.google.com^
+||yt3.ggpht.com^
+||video-stats.l.google.com^
+||googleadservices.com^
+||googlesyndication.com^
+||doubleclick.net^
+||static.doubleclick.net^
+||stats.g.doubleclick.net^
+||adservice.google.com^

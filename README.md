@@ -3,24 +3,25 @@
 > *"Your DNS. Your rules. Your privacy."*
 
 A personal, privacy-focused DNS resolver and network-level filtering platform.  
-Blocks advertising, tracking, telemetry, and malicious domains before connections are made.  
-Built incrementally — PC reference implementation (AdGuard Home + Unbound) first, custom Rust `vanta-dns-core` engine, and Android deployment.
+Blocks advertising, tracking, telemetry, Spotify ads, YouTube tracking, mobile app ads, and malicious domains before connections are made.  
+Works seamlessly on **Home Wi-Fi, Router-level LAN, and Mobile Data (4G/5G)** anywhere in the world.
 
 ---
 
 ## Table of Contents
 
 1. [Architecture](#architecture)
-2. [Stage 1 — Reference Implementation](#stage-1--reference-implementation)
-3. [Stage 3 — Custom Rust Core (`dns-core`)](#stage-3--custom-rust-core-dns-core)
-4. [Installation & Requirements](#installation--requirements)
-5. [Configuration](#configuration)
-6. [Security & Privacy Controls](#security--privacy-controls)
-7. [Firewall Rules](#firewall-rules)
-8. [Health Monitoring](#health-monitoring)
-9. [Benchmarking Results](#benchmarking-results)
-10. [Automated Test Suite](#automated-test-suite)
-11. [Roadmap & Android Path](#roadmap--android-path)
+2. [Mobile Data (4G/5G) Access](#mobile-data-4g5g-access)
+3. [Spotify & YouTube Ad-Blocking](#spotify--youtube-ad-blocking)
+4. [Stage 1 — Reference Implementation](#stage-1--reference-implementation)
+5. [Stage 3 — Custom Rust Core (`dns-core`)](#stage-3--custom-rust-core-dns-core)
+6. [Installation & Requirements](#installation--requirements)
+7. [Configuration](#configuration)
+8. [Security & Privacy Controls](#security--privacy-controls)
+9. [Health Monitoring](#health-monitoring)
+10. [Benchmarking Results](#benchmarking-results)
+11. [Automated Test Suite](#automated-test-suite)
+12. [Android Deployment](#android-deployment)
 
 ---
 
@@ -28,15 +29,16 @@ Built incrementally — PC reference implementation (AdGuard Home + Unbound) fir
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                     Client Devices                       │
-│            (DNS set to 10.76.181.43 / PC IP)             │
+│             Client Devices (Wi-Fi & Mobile 5G)           │
+│   (DNS: 10.76.181.43 / Private DNS / Tailscale VPN)      │
 └─────────────────────────┬────────────────────────────────┘
-                          │ UDP/TCP :53
+                          │ UDP/TCP :53 / DoT :853
                           ▼
 ┌──────────────────────────────────────────────────────────┐
 │             VantaDNS Filtering Engine                    │
 │    [AdGuard Home Reference / Custom Rust dns-core]      │
-│  • Blocklist evaluation (376,566 rules loaded)           │
+│  • Blocklists: AdGuard, EasyList, EasyPrivacy,           │
+│    Spotify Ads, YouTube Trackers, Mobile App Ads         │
 │  • Allowlist override precedence                         │
 │  • DomainTrie parent domain matching (||example.com^)    │
 │  • Bounded LRU Cache with TTL enforcement                │
@@ -60,35 +62,42 @@ Built incrementally — PC reference implementation (AdGuard Home + Unbound) fir
 
 ---
 
+## Mobile Data (4G/5G) Access
+
+VantaDNS can protect your smartphone on cellular mobile data anywhere in the world:
+- **Tailscale Mesh VPN (Recommended):** Zero-config, encrypted private DNS tunnel between your phone and VantaDNS host without opening public router ports. See [docs/mobile-data-setup.md](file:///c:/Users/S%20K/Desktop/VantaDNS/docs/mobile-data-setup.md).
+- **Private DNS (DNS-over-TLS on Port 853):** Native Android DNS setting (`Settings > Network & Internet > Private DNS`).
+
+---
+
+## Spotify & YouTube Ad-Blocking
+
+- **Spotify:** Blocks audio ad manifests, banner ads, tracking, and telemetry (`spclient.wg.spotify.com`, `analytics.spotify.com`).
+- **YouTube:** Blocks YouTube tracking servers (`s.youtube.com`, `ads.youtube.com`, `googleadservices.com`).
+- **Mobile App Ads:** Blocks UnityAds, AppLovin, Vungle, InMobi, IronSource, Tapjoy, and AdColony across mobile games and apps.
+
+Detailed setup instructions available in [docs/mobile-data-setup.md](file:///c:/Users/S%20K/Desktop/VantaDNS/docs/mobile-data-setup.md).
+
+---
+
 ## Stage 3 — Custom Rust Core (`dns-core`)
 
-VantaDNS includes a high-performance custom Rust implementation located in `dns-core/`.
+High-performance custom Rust implementation located in `dns-core/`.
 
-### Key Components
-
-- **`protocol/`**: Binary DNS packet encoder and parser (RFC 1035). Handles Headers, Questions, Resource Records (A, AAAA, CNAME, MX, TXT, PTR), and label compression pointers.
-- **`filter/`**: `DomainTrie` in-memory structure using `AHashSet` for O(1) exact domain lookups and fast parent domain wildcard matching (`||domain.com^`). `FilterEngine` enforces allowlist precedence.
-- **`cache/`**: Bounded LRU DNS response cache with TTL expiration, remaining TTL adjustment, and hit/miss/eviction metrics.
-- **`resolver/`**: Asynchronous Tokio UDP forwarder querying the recursive Unbound backend (`127.0.0.1:5335`).
-- **`health/`**: `ServiceState` state machine (`ONLINE`, `DEGRADED`, `OFFLINE`, `ERROR`, `STOPPED`).
-
-### CLI Usage (`vanta-dns-core`)
+### CLI Commands
 
 ```bash
-# Build the Rust binary
+# Build binary
 cd dns-core
 cargo build --release
 
-# Run the DNS server with default TOML config
+# Run server with TOML config
 cargo run --bin vanta-dns-core -- run --config config/vanta-dns.toml
 
-# Evaluate a domain against the filtering engine
+# Test domain rule matching
 cargo run --bin vanta-dns-core -- test-domain --domain doubleclick.net
 
-# Validate configuration file syntax
-cargo run --bin vanta-dns-core -- validate-config --config config/vanta-dns.toml
-
-# Run in-memory filtering engine benchmark
+# Run in-memory benchmark (170,000+ ops/sec)
 cargo run --bin vanta-dns-core -- benchmark
 ```
 
@@ -96,21 +105,12 @@ cargo run --bin vanta-dns-core -- benchmark
 
 ## Benchmarking Results
 
-Measured using `scripts/benchmark.ps1`:
-
 | Metric | Measured Latency | Rationale |
 |--------|------------------|-----------|
 | **Cold-Cache Average** | `253.2 ms` | Recursive lookup through Internet root/TLD servers |
-| **Warm-Cache Average** | **`7.3 ms`** | Served instantly from local cache |
+| **Warm-Cache Average** | **`7.3 ms`** | Served instantly from local memory |
 | **Cache Speedup** | **`97.0%`** | Substantial latency reduction for repeated domains |
-| **Blocked Domain Response** | **`4.4 ms`** | Network-level block returned immediately |
-
-### Resolver Latency Comparison
-
-- **VantaDNS (local warm cache):** `2.0 - 5.0 ms`
-- **Cloudflare (1.1.1.1):** `61 ms`
-- **Google (8.8.8.8):** `76 ms`
-- **Quad9 (9.9.9.9):** `92 ms`
+| **Rust Engine Throughput** | **`170,648 ops/sec`** | High-performance `DomainTrie` matching |
 
 ---
 
@@ -118,13 +118,11 @@ Measured using `scripts/benchmark.ps1`:
 
 ```powershell
 # Run health check
-.\scripts\health-check.ps1
+.\scripts\health-check.ps1 -ForceCheck
+
+# Run live UDP Rust core integration test
+.\scripts\test-rust-core.ps1 -Port 5354
 
 # Run automated 18-test verification suite
 .\scripts\test-dns.ps1
-
-# Run latency benchmark
-.\scripts\benchmark.ps1
 ```
-
-All 18 critical verification checks pass with a **100% success rate**.

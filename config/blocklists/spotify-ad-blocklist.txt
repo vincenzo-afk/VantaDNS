@@ -1,0 +1,19 @@
+# VantaDNS — Spotify Ad & Telemetry Blocklist
+# ============================================================
+# Blocks Spotify audio ad servers, banner ads, tracking, and telemetry
+# ============================================================
+
+||adclick.g.doubleclick.net^
+||analytics.spotify.com^
+||audio-sp-*.spotify.com^
+||crashdump.spotify.com^
+||desktop.spotify.com/ad^
+||desktop.spotify.com/ads^
+||log.spotify.com^
+||log-service.spotify.com^
+||logger.spotify.com^
+||heads4-ak-spotify-com.akamaized.net^
+||audio-ak-spotify-com.akamaized.net^
+||gads.pubmatic.com^
+||ads-fa.spotify.com^
+||pagead2.googlesyndication.com^

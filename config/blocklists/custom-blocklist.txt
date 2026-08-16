@@ -1,17 +1,40 @@
-# VantaDNS — Custom Blocklist
+# VantaDNS — Custom Master Blocklist
 # ============================================================
-# Add domains here that you want to block in addition to the
-# curated blocklists.
-#
-# Format: AdGuard DNS filtering rules (same as uBlock Origin)
-#
-# Examples:
-#   ||example-bad-domain.com^          Block exact domain + all subdomains
-#   ||ads.example.com^                 Block a specific subdomain
+# Core ad networks, tracking, YouTube, Spotify, and Mobile App Ads
 # ============================================================
 
+# Core Ad & Analytics Networks
 ||doubleclick.net^
 ||googlesyndication.com^
 ||googleadservices.com^
 ||adservice.google.com^
 ||telemetry.microsoft.com^
+||analytics.google.com^
+||facebook.com/tr^
+||graph.facebook.com^
+
+# Spotify Ad & Telemetry Endpoints
+||adclick.g.doubleclick.net^
+||analytics.spotify.com^
+||crashdump.spotify.com^
+||log.spotify.com^
+||log-service.spotify.com^
+||logger.spotify.com^
+||ads-fa.spotify.com^
+
+# YouTube Tracking & Telemetry Endpoints
+||s.youtube.com^
+||ads.youtube.com^
+||ad.youtube.com^
+||youtube-ui.l.google.com^
+||video-stats.l.google.com^
+
+# Mobile App Ad Networks
+||unityads.unity3d.com^
+||applovin.com^
+||vungle.com^
+||inmobi.com^
+||ironsource.com^
+||tapjoy.com^
+||adcolony.com^
+||mbridge.com^
