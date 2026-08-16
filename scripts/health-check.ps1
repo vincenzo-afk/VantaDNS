@@ -4,7 +4,7 @@
 # ============================================================
 
 Set-StrictMode -Version Latest
-$ErrorActionPreference = "SilentlyContinue"
+$ErrorActionPreference = 'SilentlyContinue'
 
 # ============================================================
 # CONFIGURATION
@@ -55,12 +55,12 @@ function Test-ComponentRunning { param([string]$name)
     $svc = Get-Service -Name $name -ErrorAction SilentlyContinue
     if ($svc -ne $null -and $svc.Status -eq 'Running') { return $true }
     $proc = Get-Process -Name $name -ErrorAction SilentlyContinue
-    return ($proc -ne $null -and $proc.Count -gt 0)
+    return ($proc -ne $null -and @($proc).Count -gt 0)
 }
 
 function Test-PortListening { param([int]$port)
     $conn = netstat -ano 2>$null | Select-String ":$port " | Select-String 'LISTENING'
-    return ($conn -ne $null -and $conn.Count -gt 0)
+    return ($conn -ne $null -and @($conn).Count -gt 0)
 }
 
 function Test-PingReachable { param([string]$ip, [int]$timeoutMs = 1000)
@@ -74,7 +74,7 @@ function Test-PingReachable { param([string]$ip, [int]$timeoutMs = 1000)
 function Test-DnsResolves { param([string]$domain, [string]$server = '127.0.0.1')
     try {
         $r = Resolve-DnsName -Name $domain -Server $server -Type A -ErrorAction Stop -DnsOnly
-        return ($r -ne $null -and $r.Count -gt 0)
+        return ($r -ne $null -and @($r).Count -gt 0)
     } catch { return $false }
 }
 
@@ -138,7 +138,7 @@ $aghApi   = Check-Item 'AdGuard Home API (127.0.0.1:3000)' (Test-AghApiReachable
 
 Write-Host ''
 Write-Host '  [ Network ]' -ForegroundColor White
-$lanOk    = Check-Item "LAN gateway reachable ($GATEWAY_IP)" (Test-PingReachable $GATEWAY_IP)
+$lanOk    = Check-Item "LAN gateway reachable ($GATEWAY_IP)" (Test-PingReachable $GATEWAY_IP) -critical $false
 $inetOk   = Check-Item "Internet reachable ($INTERNET_CHECK)" (Test-PingReachable $INTERNET_CHECK) -critical $false
 
 Write-Host ''
@@ -189,14 +189,10 @@ if (-not $aghRunning -and -not $unboundRunning) {
     $stateColor = 'Yellow'
     Write-Host '  [!] AdGuard Home is not running. No DNS filtering active.' -ForegroundColor Yellow
 } elseif ($aghRunning -and $unboundRunning) {
-    if (-not $inetOk -and $lanOk) {
+    if (-not $inetOk) {
         $state = 'OFFLINE'
         $stateColor = 'Yellow'
         Write-Host '  [*] No Internet - serving from cache only. LAN DNS still active.' -ForegroundColor Yellow
-    } elseif (-not $lanOk) {
-        $state = 'ERROR'
-        $stateColor = 'Red'
-        Write-Host '  [X] No LAN connectivity.' -ForegroundColor Red
     } elseif ($script:issues.Count -gt 0) {
         $state = 'DEGRADED'
         $stateColor = 'Yellow'
