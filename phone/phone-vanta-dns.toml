@@ -1,0 +1,34 @@
+# VantaDNS — on-phone config (Termux, no root)
+# Runs entirely on the phone. The local VPN service (vanta-vpn.sh) routes all
+# device DNS into this server over localhost.
+
+[server]
+bind_addr = "127.0.0.1:8533"
+upstream_addr = "127.0.0.1:5335"
+upstreams = [
+    "tcp:1.1.1.1:53",
+    "tcp:8.8.8.8:53",
+    "udp:1.1.1.1:53",
+    "udp:9.9.9.9:53"
+]
+tcp_enabled = true
+tls_enabled = false
+block_mode = "nxdomain"
+logging_enabled = false
+
+[cache]
+capacity = 50000
+min_ttl_secs = 60
+max_ttl_secs = 86400
+
+[filter]
+blocklist_paths = [
+    "$HOME/VantaDNS/config/blocklists/custom-blocklist.txt",
+    "$HOME/VantaDNS/config/blocklists/mobile-app-ads.txt",
+    "$HOME/VantaDNS/config/blocklists/spotify-ad-blocklist.txt",
+    "$HOME/VantaDNS/config/blocklists/youtube-ad-blocklist.txt",
+    "$HOME/VantaDNS/config/blocklists/adguard-base.txt"
+]
+allowlist_paths = [
+    "$HOME/VantaDNS/allowlists/custom-allowlist.txt"
+]
