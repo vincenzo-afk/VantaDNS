@@ -48,7 +48,10 @@ blocklist_paths = [
     "$HOME/VantaDNS/config/blocklists/bundled/kadhosts.partd",
     "$HOME/VantaDNS/config/blocklists/hagezi-pro-wild.txt",
     "$HOME/VantaDNS/config/blocklists/hagezi-pro-plus.txt",
-    "$HOME/VantaDNS/config/blocklists/stevenblack-domains.txt"
+    "$HOME/VantaDNS/config/blocklists/stevenblack-domains.txt",
+    "$HOME/VantaDNS/config/blocklists/1hosts-lite.txt",
+    "$HOME/VantaDNS/config/blocklists/hagezi-tif.txt",
+    "$HOME/VantaDNS/config/blocklists/notracking-domains.txt"
 ]
 allowlist_paths = [
     "$HOME/VantaDNS/allowlists/custom-allowlist.txt"

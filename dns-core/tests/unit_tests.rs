@@ -1,7 +1,7 @@
 use std::net::Ipv4Addr;
 use vanta_dns_core::{
-    DnsPacket, DnsHeader, DnsQuestion, QueryType, QueryClass, ResourceRecord, ResourceData, ResponseCode,
-    FilterEngine, FilterResult, DomainTrie, DnsCache, ServerConfig
+    DnsCache, DnsHeader, DnsPacket, DnsQuestion, DomainTrie, FilterEngine, FilterResult,
+    QueryClass, QueryType, ResourceData, ResourceRecord, ResponseCode, ServerConfig,
 };
 
 #[test]
@@ -77,11 +77,20 @@ fn test_filter_engine_allowlist_override() {
     engine.load_allowlist_rule("@@allowed.doubleclick.net");
 
     // Exact block match
-    assert_eq!(engine.evaluate("doubleclick.net"), FilterResult::Blocked("doubleclick.net".to_string()));
+    assert_eq!(
+        engine.evaluate("doubleclick.net"),
+        FilterResult::Blocked("doubleclick.net".to_string())
+    );
     // Subdomain block match
-    assert_eq!(engine.evaluate("ad.doubleclick.net"), FilterResult::Blocked("ad.doubleclick.net".to_string()));
+    assert_eq!(
+        engine.evaluate("ad.doubleclick.net"),
+        FilterResult::Blocked("ad.doubleclick.net".to_string())
+    );
     // Allowlist override match
-    assert_eq!(engine.evaluate("allowed.doubleclick.net"), FilterResult::AllowListMatched("allowed.doubleclick.net".to_string()));
+    assert_eq!(
+        engine.evaluate("allowed.doubleclick.net"),
+        FilterResult::AllowListMatched("allowed.doubleclick.net".to_string())
+    );
     // Non-blocked domain
     assert_eq!(engine.evaluate("google.com"), FilterResult::Allowed);
 }
@@ -89,7 +98,10 @@ fn test_filter_engine_allowlist_override() {
 #[test]
 fn test_domain_trie_normalization() {
     assert_eq!(DomainTrie::normalize("EXAMPLE.COM."), "example.com");
-    assert_eq!(DomainTrie::normalize("  Sub.Domain.Org  "), "sub.domain.org");
+    assert_eq!(
+        DomainTrie::normalize("  Sub.Domain.Org  "),
+        "sub.domain.org"
+    );
 }
 
 #[test]
@@ -111,7 +123,11 @@ fn test_lru_cache_ttl_and_eviction() {
             nscount: 0,
             arcount: 0,
         },
-        questions: vec![DnsQuestion { name: "example.com".to_string(), qtype: QueryType::A, qclass: QueryClass::IN }],
+        questions: vec![DnsQuestion {
+            name: "example.com".to_string(),
+            qtype: QueryType::A,
+            qclass: QueryClass::IN,
+        }],
         answers: vec![ResourceRecord {
             name: "example.com".to_string(),
             rtype: QueryType::A,

@@ -1,3 +1,3 @@
 pub mod lru_cache;
 
-pub use lru_cache::{DnsCache, CachedResponse, CacheStats};
+pub use lru_cache::{CacheStats, CachedResponse, DnsCache};

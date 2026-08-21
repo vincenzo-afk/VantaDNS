@@ -121,7 +121,8 @@ impl tokio_rustls::rustls::client::danger::ServerCertVerifier for SkipVerify {
         _server_name: &tokio_rustls::rustls::pki_types::ServerName<'_>,
         _ocsp_response: &[u8],
         _now: tokio_rustls::rustls::pki_types::UnixTime,
-    ) -> Result<tokio_rustls::rustls::client::danger::ServerCertVerified, tokio_rustls::rustls::Error> {
+    ) -> Result<tokio_rustls::rustls::client::danger::ServerCertVerified, tokio_rustls::rustls::Error>
+    {
         Ok(tokio_rustls::rustls::client::danger::ServerCertVerified::assertion())
     }
 
@@ -130,7 +131,10 @@ impl tokio_rustls::rustls::client::danger::ServerCertVerifier for SkipVerify {
         _message: &[u8],
         _cert: &tokio_rustls::rustls::pki_types::CertificateDer<'_>,
         _dss: &tokio_rustls::rustls::DigitallySignedStruct,
-    ) -> Result<tokio_rustls::rustls::client::danger::HandshakeSignatureValid, tokio_rustls::rustls::Error> {
+    ) -> Result<
+        tokio_rustls::rustls::client::danger::HandshakeSignatureValid,
+        tokio_rustls::rustls::Error,
+    > {
         Ok(tokio_rustls::rustls::client::danger::HandshakeSignatureValid::assertion())
     }
 
@@ -139,7 +143,10 @@ impl tokio_rustls::rustls::client::danger::ServerCertVerifier for SkipVerify {
         _message: &[u8],
         _cert: &tokio_rustls::rustls::pki_types::CertificateDer<'_>,
         _dss: &tokio_rustls::rustls::DigitallySignedStruct,
-    ) -> Result<tokio_rustls::rustls::client::danger::HandshakeSignatureValid, tokio_rustls::rustls::Error> {
+    ) -> Result<
+        tokio_rustls::rustls::client::danger::HandshakeSignatureValid,
+        tokio_rustls::rustls::Error,
+    > {
         Ok(tokio_rustls::rustls::client::danger::HandshakeSignatureValid::assertion())
     }
 
@@ -163,7 +170,10 @@ impl tokio_rustls::rustls::client::danger::ServerCertVerifier for SkipVerify {
 #[test]
 fn tcp_resolution_google() {
     let resp = block_on(dot_query_tcp("google.com"));
-    assert!(response_has_answer(&resp), "expected answer for google.com over TCP");
+    assert!(
+        response_has_answer(&resp),
+        "expected answer for google.com over TCP"
+    );
     println!("TCP OK: google.com -> {} bytes", resp.len());
 }
 
@@ -180,7 +190,10 @@ fn tcp_blocked_domain() {
 #[test]
 fn tls_resolution_google() {
     let resp = block_on(dot_query_tls("google.com"));
-    assert!(response_has_answer(&resp), "expected answer for google.com over TLS");
+    assert!(
+        response_has_answer(&resp),
+        "expected answer for google.com over TLS"
+    );
     println!("TLS OK: google.com -> {} bytes", resp.len());
 }
 
@@ -193,4 +206,3 @@ fn tls_blocked_domain() {
     );
     println!("TLS OK: doubleclick.net blocked -> NXDOMAIN");
 }
-

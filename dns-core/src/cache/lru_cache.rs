@@ -1,7 +1,7 @@
+use crate::protocol::{DnsPacket, QueryType};
+use lru::LruCache;
 use std::num::NonZeroUsize;
 use std::time::{Duration, Instant};
-use lru::LruCache;
-use crate::protocol::{DnsPacket, QueryType};
 
 #[derive(Debug, Clone)]
 pub struct CachedResponse {
@@ -90,8 +90,7 @@ impl DnsCache {
             .min()
             .unwrap_or(300) as u64;
 
-        let effective_ttl = Duration::from_secs(raw_ttl)
-            .clamp(self.min_ttl, self.max_ttl);
+        let effective_ttl = Duration::from_secs(raw_ttl).clamp(self.min_ttl, self.max_ttl);
 
         let cached = CachedResponse {
             packet,

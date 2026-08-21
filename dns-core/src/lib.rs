@@ -1,13 +1,16 @@
-pub mod config;
-pub mod protocol;
-pub mod filter;
 pub mod cache;
-pub mod resolver;
+pub mod config;
+pub mod filter;
 pub mod health;
+pub mod protocol;
+pub mod resolver;
 
+pub use cache::{CacheStats, DnsCache};
 pub use config::ServerConfig;
-pub use protocol::{DnsPacket, DnsHeader, DnsQuestion, QueryType, QueryClass, ResourceRecord, ResourceData, ResponseCode};
-pub use filter::{FilterEngine, FilterResult, DomainTrie};
-pub use cache::{DnsCache, CacheStats};
-pub use resolver::UpstreamForwarder;
+pub use filter::{DomainTrie, FilterEngine, FilterResult};
 pub use health::{ServiceState, SystemHealth};
+pub use protocol::{
+    DnsHeader, DnsPacket, DnsQuestion, QueryClass, QueryType, ResourceData, ResourceRecord,
+    ResponseCode,
+};
+pub use resolver::UpstreamForwarder;

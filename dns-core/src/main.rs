@@ -1,25 +1,23 @@
+use clap::{Parser, Subcommand};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
-use tokio::net::{TcpListener, UdpSocket};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, UdpSocket};
 use tokio::sync::Mutex;
-use clap::{Parser, Subcommand};
 use tracing::{info, warn};
 
 #[cfg(feature = "tls")]
 use {
-    tokio_rustls::TlsAcceptor,
-    tokio_rustls::rustls::{
-        ServerConfig as RustlsServerConfig,
-        pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer},
-    },
     std::io::BufReader,
+    tokio_rustls::rustls::{
+        pki_types::{CertificateDer, PrivateKeyDer},
+        ServerConfig as RustlsServerConfig,
+    },
+    tokio_rustls::TlsAcceptor,
 };
 
-use vanta_dns_core::{
-    ServerConfig, DnsPacket, FilterEngine, FilterResult, DnsCache,
-};
+use vanta_dns_core::{DnsCache, DnsPacket, FilterEngine, FilterResult, ServerConfig};
 
 #[derive(Parser)]
 #[command(name = "vanta-dns-core")]
@@ -68,20 +66,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("\n  VantaDNS Rule Evaluation for: '{}'", domain);
             match engine.evaluate(&domain) {
                 FilterResult::Allowed => println!("  Status: ALLOWED (Passthrough)"),
-                FilterResult::AllowListMatched(rule) => println!("  Status: ALLOWED (AllowList matched: {})", rule),
-                FilterResult::Blocked(rule) => println!("  Status: BLOCKED (BlockList matched: {})", rule),
+                FilterResult::AllowListMatched(rule) => {
+                    println!("  Status: ALLOWED (AllowList matched: {})", rule)
+                }
+                FilterResult::Blocked(rule) => {
+                    println!("  Status: BLOCKED (BlockList matched: {})", rule)
+                }
             }
             println!();
         }
-        Some(Commands::ValidateConfig { config }) => {
-            match ServerConfig::load_from_file(&config) {
-                Ok(cfg) => println!("\n  ✅ Config file '{}' is valid!\n  Bind: {}\n  Upstream: {}\n  Block mode: {}\n", config, cfg.bind_addr, cfg.upstream_addr, cfg.block_mode),
-                Err(e) => {
-                    println!("\n  ❌ Config validation failed: {}\n", e);
-                    std::process::exit(1);
-                }
+        Some(Commands::ValidateConfig { config }) => match ServerConfig::load_from_file(&config) {
+            Ok(cfg) => println!(
+                "\n  ✅ Config file '{}' is valid!\n  Bind: {}\n  Upstream: {}\n  Block mode: {}\n",
+                config, cfg.bind_addr, cfg.upstream_addr, cfg.block_mode
+            ),
+            Err(e) => {
+                println!("\n  ❌ Config validation failed: {}\n", e);
+                std::process::exit(1);
             }
-        }
+        },
         Some(Commands::Benchmark) => {
             println!("\n  ========================================================");
             println!("  VantaDNS Rust Core — Filtering Engine Benchmark");
@@ -96,14 +99,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let start = Instant::now();
             let iterations = 1_000_000;
             for i in 0..iterations {
-                let test = if i % 2 == 0 { "sub.bad-domain-5000.com" } else { "clean-domain.org" };
+                let test = if i % 2 == 0 {
+                    "sub.bad-domain-5000.com"
+                } else {
+                    "clean-domain.org"
+                };
                 let _ = engine.evaluate(test);
             }
             let duration = start.elapsed();
             let ops_per_sec = (iterations as f64) / duration.as_secs_f64();
 
-            println!("  Evaluated 1,000,000 domain lookups in {:.3?} ({:.0} ops/sec)", duration, ops_per_sec);
-            println!("  Average lookup latency: {:.2} ns per domain\n", (duration.as_nanos() as f64) / (iterations as f64));
+            println!(
+                "  Evaluated 1,000,000 domain lookups in {:.3?} ({:.0} ops/sec)",
+                duration, ops_per_sec
+            );
+            println!(
+                "  Average lookup latency: {:.2} ns per domain\n",
+                (duration.as_nanos() as f64) / (iterations as f64)
+            );
         }
         Some(Commands::Run { config }) => {
             run_server(&config).await?;
@@ -128,16 +141,37 @@ async fn run_server(config_path: &str) -> Result<(), Box<dyn std::error::Error>>
     };
 
     println!("  Bind address:     {}", config.bind_addr);
-    println!("  Upstream:         {:?}", config.resolve_upstreams().iter().map(|u| format!("{:?} {}", u.transport, u.addr)).collect::<Vec<_>>());
+    println!(
+        "  Upstream:         {:?}",
+        config
+            .resolve_upstreams()
+            .iter()
+            .map(|u| format!("{:?} {}", u.transport, u.addr))
+            .collect::<Vec<_>>()
+    );
     println!("  Block mode:       {}", config.block_mode);
     println!("  Cache capacity:   {} entries", config.cache_capacity);
-    println!("  TCP listener:     {}", if config.tcp_enabled { "ENABLED" } else { "disabled" });
-    println!("  TLS listener:     {}", if config.tls_enabled { "ENABLED" } else { "disabled" });
+    println!(
+        "  TCP listener:     {}",
+        if config.tcp_enabled {
+            "ENABLED"
+        } else {
+            "disabled"
+        }
+    );
+    println!(
+        "  TLS listener:     {}",
+        if config.tls_enabled {
+            "ENABLED"
+        } else {
+            "disabled"
+        }
+    );
 
     let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/tmp".into());
     let resolve_path = |p: &str| -> String {
-        if p.starts_with("$HOME") {
-            format!("{}{}", home_dir, &p["$HOME".len()..])
+        if let Some(stripped) = p.strip_prefix("$HOME") {
+            format!("{}{}", home_dir, stripped)
         } else {
             p.to_string()
         }
@@ -163,7 +197,11 @@ async fn run_server(config_path: &str) -> Result<(), Box<dyn std::error::Error>>
             println!("  WARN: could not read allowlist {}", path);
         }
     }
-    println!("  Blocklist rules loaded: {} ({} allowlist)", filter_engine.blocklist_rule_count(), filter_engine.allowlist_rule_count());
+    println!(
+        "  Blocklist rules loaded: {} ({} allowlist)",
+        filter_engine.blocklist_rule_count(),
+        filter_engine.allowlist_rule_count()
+    );
 
     let cache = Arc::new(Mutex::new(DnsCache::new(
         config.cache_capacity,
@@ -204,7 +242,12 @@ async fn run_server(config_path: &str) -> Result<(), Box<dyn std::error::Error>>
 
     // ---------- UDP loop ----------
     let udp_socket = Arc::new(socket);
-    let udp_state = Arc::new(DnsServiceState { cache: cache.clone(), forwarder: forwarder.clone(), filter: filter.clone(), block_mode: config.block_mode.clone() });
+    let udp_state = Arc::new(DnsServiceState {
+        cache: cache.clone(),
+        forwarder: forwarder.clone(),
+        filter: filter.clone(),
+        block_mode: config.block_mode.clone(),
+    });
     let udp_sock = udp_socket.clone();
     let udp_state_clone = udp_state.clone();
     tokio::spawn(async move {
@@ -303,10 +346,7 @@ pub enum DnsReplySink {
 }
 
 /// Process one DNS query and return the response bytes (or None on upstream failure).
-async fn resolve_dns_query(
-    query_bytes: &[u8],
-    state: &DnsServiceState,
-) -> Option<Vec<u8>> {
+async fn resolve_dns_query(query_bytes: &[u8], state: &DnsServiceState) -> Option<Vec<u8>> {
     let packet = match DnsPacket::parse(query_bytes) {
         Ok(p) => p,
         Err(_) => return None,
@@ -321,7 +361,12 @@ async fn resolve_dns_query(
     match state.filter.evaluate(&question.name) {
         FilterResult::Blocked(rule) => {
             info!("BLOCKED {} (matched rule: {})", question.name, rule);
-            return Some(packet.build_blocked_response(state.block_mode == "nxdomain").to_bytes().to_vec());
+            return Some(
+                packet
+                    .build_blocked_response(state.block_mode == "nxdomain")
+                    .to_bytes()
+                    .to_vec(),
+            );
         }
         FilterResult::AllowListMatched(rule) => {
             info!("ALLOWED {} (override rule: {})", question.name, rule);
@@ -362,7 +407,9 @@ pub async fn write_framed<W>(
 where
     W: AsyncWriteExt + Unpin + Send,
 {
-    writer.write_all(&(bytes.len() as u16).to_be_bytes()).await?;
+    writer
+        .write_all(&(bytes.len() as u16).to_be_bytes())
+        .await?;
     writer.write_all(bytes).await?;
     writer.flush().await?;
     Ok(())
@@ -431,7 +478,9 @@ where
         }
         match state.forwarder.forward_raw(&query).await {
             Ok(resp_bytes) => {
-                stream.write_all(&(resp_bytes.len() as u16).to_be_bytes()).await?;
+                stream
+                    .write_all(&(resp_bytes.len() as u16).to_be_bytes())
+                    .await?;
                 stream.write_all(&resp_bytes).await?;
                 if let Ok(resp_packet) = DnsPacket::parse(&resp_bytes) {
                     let mut cache_guard = state.cache.lock().await;
@@ -469,7 +518,7 @@ where
 async fn build_tls_acceptor(
     config: &ServerConfig,
 ) -> Result<Option<TlsAcceptor>, Box<dyn std::error::Error>> {
-    use std::path::Path;
+
 
     let cert_path = config
         .tls_cert_path
@@ -508,4 +557,3 @@ async fn build_tls_acceptor(
 
     Ok(Some(TlsAcceptor::from(Arc::new(tls_config))))
 }
-

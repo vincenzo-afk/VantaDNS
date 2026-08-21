@@ -129,6 +129,15 @@ fetch_robust "hagezi-pro-plus.txt" \
 fetch_robust "stevenblack-domains.txt" \
     "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts" || true
 
+fetch_robust "1hosts-lite.txt" \
+    "https://o0.pages.dev/Lite/domains.txt" || true
+
+fetch_robust "hagezi-tif.txt" \
+    "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/tif.txt" || true
+
+fetch_robust "notracking-domains.txt" \
+    "https://raw.githubusercontent.com/notracking/hosts-blocklists/master/domains.txt" || true
+
 # Convert StevenBlack hosts format (0.0.0.0 domain) -> bare domains
 if [ -f "$LISTS/stevenblack-domains.txt" ] && grep -q "^0\.0\.0\.0" "$LISTS/stevenblack-domains.txt"; then
     grep -E "^0\.0\.0\.0" "$LISTS/stevenblack-domains.txt" | awk '{print $2}' \

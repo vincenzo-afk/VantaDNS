@@ -1,9 +1,9 @@
+use crate::protocol::{DnsError, DnsPacket};
 use std::net::SocketAddr;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpStream, UdpSocket};
 use tokio::time::timeout;
-use crate::protocol::{DnsPacket, DnsError};
 
 /// Upstream DNS forwarding strategy.
 /// - `Udp`: classic UDP/53 (default, works for Unbound-style local backends).
@@ -56,25 +56,23 @@ impl UpstreamForwarder {
     /// Tries each upstream in order (UDP first by default); returns the first success.
     pub async fn forward_raw(&self, query_bytes: &[u8]) -> Result<Vec<u8>, DnsError> {
         if self.upstreams.is_empty() {
-            return Err(DnsError::ParseError("No upstream resolver configured".to_string()));
+            return Err(DnsError::ParseError(
+                "No upstream resolver configured".to_string(),
+            ));
         }
 
         let mut last_err = DnsError::ParseError("no upstream attempted".to_string());
 
         for entry in &self.upstreams {
             match entry.transport {
-                UpstreamTransport::Udp => {
-                    match self.forward_udp(query_bytes, entry.addr).await {
-                        Ok(resp) => return Ok(resp),
-                        Err(e) => last_err = e,
-                    }
-                }
-                UpstreamTransport::Tcp => {
-                    match self.forward_tcp(query_bytes, entry.addr).await {
-                        Ok(resp) => return Ok(resp),
-                        Err(e) => last_err = e,
-                    }
-                }
+                UpstreamTransport::Udp => match self.forward_udp(query_bytes, entry.addr).await {
+                    Ok(resp) => return Ok(resp),
+                    Err(e) => last_err = e,
+                },
+                UpstreamTransport::Tcp => match self.forward_tcp(query_bytes, entry.addr).await {
+                    Ok(resp) => return Ok(resp),
+                    Err(e) => last_err = e,
+                },
             }
         }
 
@@ -121,25 +119,38 @@ impl UpstreamForwarder {
 
             // 2-byte big-endian length prefix + DNS message
             let len = query_bytes.len() as u16;
-            writer.write_all(&len.to_be_bytes()).await
+            writer
+                .write_all(&len.to_be_bytes())
+                .await
                 .map_err(|e| DnsError::ParseError(format!("TCP send length error: {}", e)))?;
-            writer.write_all(query_bytes).await
+            writer
+                .write_all(query_bytes)
+                .await
                 .map_err(|e| DnsError::ParseError(format!("TCP send error: {}", e)))?;
-            writer.flush().await
+            writer
+                .flush()
+                .await
                 .map_err(|e| DnsError::ParseError(format!("TCP flush error: {}", e)))?;
 
             // Read 2-byte response length
             let mut len_buf = [0u8; 2];
-            reader.read_exact(&mut len_buf).await
+            reader
+                .read_exact(&mut len_buf)
+                .await
                 .map_err(|e| DnsError::ParseError(format!("TCP recv length error: {}", e)))?;
             let resp_len = u16::from_be_bytes(len_buf) as usize;
             if resp_len == 0 || resp_len > 65535 {
-                return Err(DnsError::ParseError(format!("Invalid upstream TCP response length: {}", resp_len)));
+                return Err(DnsError::ParseError(format!(
+                    "Invalid upstream TCP response length: {}",
+                    resp_len
+                )));
             }
 
             // Read response DNS message
             let mut resp = vec![0u8; resp_len];
-            reader.read_exact(&mut resp).await
+            reader
+                .read_exact(&mut resp)
+                .await
                 .map_err(|e| DnsError::ParseError(format!("TCP recv error: {}", e)))?;
 
             Ok(resp)

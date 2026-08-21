@@ -1,5 +1,5 @@
-use std::net::Ipv4Addr;
 use bytes::BytesMut;
+use std::net::Ipv4Addr;
 use thiserror::Error;
 
 pub mod header;
@@ -7,8 +7,8 @@ pub mod question;
 pub mod rr;
 
 pub use header::{DnsHeader, Opcode, ResponseCode};
-pub use question::{DnsQuestion, QueryType, QueryClass};
-pub use rr::{ResourceRecord, ResourceData};
+pub use question::{DnsQuestion, QueryClass, QueryType};
+pub use rr::{ResourceData, ResourceRecord};
 
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum DnsError {

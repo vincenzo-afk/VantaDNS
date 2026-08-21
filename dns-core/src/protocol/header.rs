@@ -1,5 +1,5 @@
-use bytes::{Buf, BufMut, BytesMut};
 use crate::protocol::DnsError;
+use bytes::{Buf, BufMut, BytesMut};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Opcode {

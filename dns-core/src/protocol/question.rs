@@ -1,5 +1,5 @@
-use bytes::{Buf, BufMut, BytesMut};
 use crate::protocol::DnsError;
+use bytes::{Buf, BufMut, BytesMut};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum QueryType {
@@ -80,12 +80,18 @@ impl DnsQuestion {
     pub fn parse(buf: &mut std::io::Cursor<&[u8]>) -> Result<Self, DnsError> {
         let name = read_domain_name(buf)?;
         if buf.remaining() < 4 {
-            return Err(DnsError::BufferTooShort("DNS Question requires 4 bytes for QTYPE & QCLASS"));
+            return Err(DnsError::BufferTooShort(
+                "DNS Question requires 4 bytes for QTYPE & QCLASS",
+            ));
         }
         let qtype = QueryType::from_u16(buf.get_u16());
         let qclass = QueryClass::from_u16(buf.get_u16());
 
-        Ok(DnsQuestion { name, qtype, qclass })
+        Ok(DnsQuestion {
+            name,
+            qtype,
+            qclass,
+        })
     }
 
     pub fn write_to(&self, buf: &mut BytesMut) {
@@ -102,10 +108,14 @@ pub fn read_domain_name(buf: &mut std::io::Cursor<&[u8]>) -> Result<String, DnsE
 
     loop {
         if jumps_count > 50 {
-            return Err(DnsError::InvalidDomainName("Infinite DNS compression pointer loop detected"));
+            return Err(DnsError::InvalidDomainName(
+                "Infinite DNS compression pointer loop detected",
+            ));
         }
         if !buf.has_remaining() {
-            return Err(DnsError::BufferTooShort("Unexpected EOF while reading domain name"));
+            return Err(DnsError::BufferTooShort(
+                "Unexpected EOF while reading domain name",
+            ));
         }
 
         let len = buf.get_u8();

@@ -1,5 +1,5 @@
-use std::net::SocketAddr;
 use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -118,7 +118,7 @@ fn default_tls_port() -> u16 {
 impl ServerConfig {
     pub fn load_from_file(path: &str) -> Result<Self, ConfigError> {
         let content = std::fs::read_to_string(path)?;
-        
+
         // Try table format first
         if let Ok(toml_file) = toml::from_str::<TomlConfigFile>(&content) {
             let filter = toml_file.filter.unwrap_or_else(|| FilterSection {
@@ -156,14 +156,21 @@ impl ServerConfig {
 
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.cache_capacity == 0 {
-            return Err(ConfigError::ValidationError("cache_capacity must be greater than 0".to_string()));
+            return Err(ConfigError::ValidationError(
+                "cache_capacity must be greater than 0".to_string(),
+            ));
         }
         if self.min_ttl_secs > self.max_ttl_secs {
-            return Err(ConfigError::ValidationError("min_ttl_secs cannot be greater than max_ttl_secs".to_string()));
+            return Err(ConfigError::ValidationError(
+                "min_ttl_secs cannot be greater than max_ttl_secs".to_string(),
+            ));
         }
         let mode = self.block_mode.to_lowercase();
         if mode != "nxdomain" && mode != "zero_ip" {
-            return Err(ConfigError::ValidationError(format!("Invalid block_mode: '{}'. Allowed: 'nxdomain' or 'zero_ip'", self.block_mode)));
+            return Err(ConfigError::ValidationError(format!(
+                "Invalid block_mode: '{}'. Allowed: 'nxdomain' or 'zero_ip'",
+                self.block_mode
+            )));
         }
         if self.tls_enabled {
             if self.tls_cert_path.is_none() && std::env::var("TLS_CERT_PATH").is_err() {

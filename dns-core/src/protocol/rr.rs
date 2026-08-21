@@ -1,6 +1,9 @@
-use std::net::{Ipv4Addr, Ipv6Addr};
+use crate::protocol::{
+    question::{read_domain_name, write_domain_name, QueryClass, QueryType},
+    DnsError,
+};
 use bytes::{Buf, BufMut, BytesMut};
-use crate::protocol::{DnsError, question::{QueryType, QueryClass, read_domain_name, write_domain_name}};
+use std::net::{Ipv4Addr, Ipv6Addr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResourceData {
@@ -25,7 +28,9 @@ impl ResourceRecord {
     pub fn parse(buf: &mut std::io::Cursor<&[u8]>) -> Result<Self, DnsError> {
         let name = read_domain_name(buf)?;
         if buf.remaining() < 10 {
-            return Err(DnsError::BufferTooShort("ResourceRecord header requires 10 bytes"));
+            return Err(DnsError::BufferTooShort(
+                "ResourceRecord header requires 10 bytes",
+            ));
         }
 
         let rtype = QueryType::from_u16(buf.get_u16());
@@ -34,7 +39,9 @@ impl ResourceRecord {
         let rdlength = buf.get_u16() as usize;
 
         if buf.remaining() < rdlength {
-            return Err(DnsError::BufferTooShort("RDATA length exceeds remaining buffer"));
+            return Err(DnsError::BufferTooShort(
+                "RDATA length exceeds remaining buffer",
+            ));
         }
 
         let rdata = match rtype {
@@ -55,7 +62,10 @@ impl ResourceRecord {
             QueryType::MX if rdlength >= 3 => {
                 let preference = buf.get_u16();
                 let exchange = read_domain_name(buf)?;
-                ResourceData::MX { preference, exchange }
+                ResourceData::MX {
+                    preference,
+                    exchange,
+                }
             }
             QueryType::TXT => {
                 let mut txts = Vec::new();
@@ -107,7 +117,10 @@ impl ResourceRecord {
                 buf.put_u16(temp.len() as u16);
                 buf.put_slice(&temp);
             }
-            ResourceData::MX { preference, exchange } => {
+            ResourceData::MX {
+                preference,
+                exchange,
+            } => {
                 let mut temp = BytesMut::new();
                 temp.put_u16(*preference);
                 write_domain_name(exchange, &mut temp);

@@ -36,7 +36,8 @@ impl FilterEngine {
             let trimmed = line.trim();
             if trimmed.starts_with("@@") {
                 self.load_allowlist_rule(trimmed);
-            } else if !trimmed.is_empty() && !trimmed.starts_with('#') && !trimmed.starts_with('!') {
+            } else if !trimmed.is_empty() && !trimmed.starts_with('#') && !trimmed.starts_with('!')
+            {
                 self.load_blocklist_rule(trimmed);
                 count += 1;
             }
